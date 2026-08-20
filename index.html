@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Promotion Banner Generator</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html-to-image/1.11.11/html-to-image.min.js"></script>
+<style>
+  :root{
+    --navy:#1B365D; --gold:#D4AF37; --green:#2E8B57; --red:#C41E3A;
+    --cream:#FDF8F0; --bg:#faf7f2; --card:#fff; --line:#e7e0d3; --muted:#6b7280; --ink:#243040;
+    --radius:12px; --shadow:0 4px 18px rgba(27,54,93,.08);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:"Inter","Noto Sans TC",system-ui,-apple-system,sans-serif;color:var(--ink);background:var(--bg)}
+  .wrap{max-width:900px;margin:0 auto;padding:26px 20px 90px}
+  h1.title{font-size:30px;font-weight:800;color:var(--navy);margin:0}
+  .subtitle{color:var(--muted);font-size:15px;margin:4px 0 0}
+  /* stepper */
+  .stepper{display:flex;align-items:flex-start;justify-content:center;gap:0;margin:26px 0 22px}
+  .stp{display:flex;flex-direction:column;align-items:center;gap:6px;width:96px;cursor:pointer}
+  .stp .dot{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;background:#e9e2d4;color:var(--muted);transition:.15s}
+  .stp.active .dot{background:var(--navy);color:#fff;transform:scale(1.1)}
+  .stp.done .dot{background:rgba(27,54,93,.82);color:#fff}
+  .stp .lbl{font-size:12px;color:var(--muted);font-weight:600}
+  .stp.active .lbl{color:var(--navy)}
+  .conn{height:2px;background:#e7e0d3;flex:1;margin-top:17px;min-width:14px;max-width:70px}
+  /* card */
+  .card{background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:26px}
+  .step-title{font-size:20px;font-weight:800;color:var(--navy);margin:0 0 3px}
+  .step-desc{font-size:13px;color:var(--muted);margin:0 0 18px;line-height:1.45}
+  label.f{display:block;font-size:13px;font-weight:700;color:var(--ink);margin:14px 0 5px}
+  input[type=text],input[type=number],select,textarea{width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:9px;font-size:14px;font-family:inherit;background:#fff}
+  input:focus,select:focus{outline:none;border-color:var(--navy)}
+  .hint{font-size:12px;color:var(--muted);margin-top:5px;line-height:1.45}
+  .sep{height:1px;background:var(--line);margin:20px 0}
+  button{font-family:inherit;cursor:pointer;border:none;border-radius:9px;padding:9px 15px;font-size:14px;font-weight:600;transition:.15s;display:inline-flex;align-items:center;gap:6px}
+  .btn-primary{background:var(--navy);color:#fff}.btn-primary:hover{background:#12233e}
+  .btn-primary:disabled{opacity:.45;cursor:not-allowed}
+  .btn-gold{background:var(--gold);color:#3a2f10}.btn-gold:hover{filter:brightness(1.05)}
+  .btn-ghost{background:#fff;color:var(--navy);border:1px solid var(--line)}.btn-ghost:hover{background:#f2ede3}
+  .btn-danger{background:#fff;color:var(--red);border:1px solid #eaccc6}.btn-danger:hover{background:#fbeeeb}
+  .mini{padding:6px 10px;font-size:12px;border-radius:8px}
+  .themegrid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+  .theme{border:2px solid var(--line);border-radius:12px;padding:20px 8px;text-align:center;cursor:pointer;background:#fff;transition:.15s}
+  .theme:hover{border-color:var(--gold)}
+  .theme.sel{border-color:var(--navy);background:rgba(27,54,93,.05);box-shadow:var(--shadow)}
+  .theme .em{font-size:30px}.theme .nm{font-size:15px;font-weight:700;margin-top:6px}.theme .zh{font-size:12px;color:var(--muted);margin-top:1px}
+  .navrow{display:flex;align-items:center;justify-content:space-between;margin-top:20px}
+  .badge{background:var(--navy);color:#fff;font-size:11px;font-weight:800;border-radius:20px;padding:3px 10px;letter-spacing:.4px}
+  .badge.amber{background:#f4e7c4;color:#8a6d15}.badge.gray{background:#eceae5;color:#888}.badge.green{background:#e4f1e9;color:var(--green)}
+  .tier{border:1px solid var(--line);border-radius:12px;padding:13px;margin-bottom:12px;background:#fff}
+  .tier.hid{opacity:.55}
+  .tier-h{display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap}
+  .gift{border:1px solid var(--line);border-radius:10px;padding:10px;margin:8px 0;background:var(--cream)}
+  .gift.hid{opacity:.5}
+  .gift-h{display:flex;align-items:center;gap:7px;margin-bottom:7px}
+  .gift-h .gt{font-size:13px;font-weight:700;color:var(--navy);flex:1}
+  .prow{display:flex;align-items:center;gap:9px}
+  .prow img{width:40px;height:40px;object-fit:contain;background:#fff;border:1px solid var(--line);border-radius:6px}
+  .prow .pi{flex:1;min-width:0}.prow .pi .n{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.prow .pi .z{font-size:12px;color:var(--muted)}
+  .pickwrap{position:relative;margin-top:7px}
+  .picklist{position:absolute;z-index:40;left:0;right:0;top:100%;background:#fff;border:1px solid var(--line);border-radius:10px;max-height:260px;overflow-y:auto;box-shadow:var(--shadow);display:none}
+  .picklist.open{display:block}
+  .pi2{display:flex;align-items:center;gap:9px;padding:7px 10px;cursor:pointer;border-bottom:1px solid #f2ede2}
+  .pi2:hover{background:var(--cream)}.pi2 img{width:30px;height:30px;object-fit:contain;background:#fff;border:1px solid var(--line);border-radius:5px}
+  .pi2 .n{font-size:13px;font-weight:600}.pi2 .m{font-size:12px;color:var(--muted)}
+  .grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-top:7px}
+  .cell{background:#fff;border:1px solid var(--line);border-radius:8px;padding:6px 8px}
+  .cell .k{font-size:11px;color:var(--muted)}.cell .v{font-size:13px;font-weight:700;color:var(--navy)}
+  .row{display:flex;gap:10px}.row>*{flex:1}
+  .drop{border:2px dashed var(--line);border-radius:10px;padding:16px;text-align:center;font-size:13px;color:var(--muted);cursor:pointer;background:#fff}
+  .drop:hover{border-color:var(--gold);background:#fffdf6}
+  .thumbrow{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+  .bgthumb{position:relative;border:1px solid var(--line);border-radius:8px;overflow:hidden;cursor:pointer}
+  .bgthumb img{display:block;object-fit:cover}
+  .bgthumb.desktop img{width:104px;height:58px}.bgthumb.mobile img{width:44px;height:78px}
+  .bgthumb .del{position:absolute;top:2px;right:2px;background:rgba(180,60,45,.92);color:#fff;border:none;border-radius:5px;font-size:10px;padding:1px 5px;cursor:pointer}
+  .bgthumb.sel{outline:3px solid var(--navy)}
+  .saved{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .savedcard{background:var(--cream);border:1px solid var(--line);border-radius:12px;padding:12px;min-height:96px;display:flex;flex-direction:column;gap:6px}
+  .savedcard .nm{font-weight:700;font-size:14px;color:var(--navy)}
+  .savedcard .mt{font-size:11px;color:var(--muted)}
+  .savedcard.empty{align-items:center;justify-content:center;color:var(--muted);font-size:12px}
+  .summary{background:var(--cream);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:14px}
+  .warn{font-size:12px;color:#b06a12}
+  .gallery{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px}
+  .gcard{background:#fff;border:1px solid var(--line);border-radius:10px;padding:9px}
+  .gcard img{width:100%;border-radius:6px;display:block;cursor:pointer}
+  .gcard .cap{display:flex;justify-content:space-between;align-items:center;margin-top:7px}
+  .gcard .cap .t{font-size:12px;font-weight:700;color:var(--navy)}
+  .seg{display:inline-flex;background:#eee7d9;border-radius:10px;padding:3px;gap:2px}
+  .seg button{background:transparent;color:var(--navy);padding:7px 12px;font-size:13px}
+  .seg button.on{background:#fff;box-shadow:var(--shadow)}
+  /* dialog */
+  .overlay{position:fixed;inset:0;background:rgba(20,30,45,.55);display:none;align-items:center;justify-content:center;z-index:80;padding:20px}
+  .overlay.open{display:flex}
+  .dialog{background:#fff;border-radius:14px;max-width:95vw;max-height:95vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+  .dialog .dh{display:flex;align-items:center;gap:12px;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+  .dialog .db{padding:16px;overflow:auto;display:flex;justify-content:center;background:#f6f2ea}
+  .toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--navy);color:#fff;padding:10px 18px;border-radius:10px;font-size:13px;box-shadow:var(--shadow);z-index:99;opacity:0;pointer-events:none;transition:.25s}
+  .toast.show{opacity:1}
+  .topbar{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
+  .topbar .acts{display:flex;gap:7px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <div><h1 class="title">Promotion Banner Generator</h1><div class="subtitle">Create branded promotion banners for Ms. Chu Soap &amp; Beaut</div></div>
+    <div class="acts">
+      <button class="btn-ghost mini" onclick="saveJSON()">💾 Export JSON</button>
+      <button class="btn-ghost mini" onclick="document.getElementById('loadfile').click()">📂 Import</button>
+      <input type="file" id="loadfile" accept="application/json" style="display:none" onchange="loadJSON(event)">
+    </div>
+  </div>
+
+  <div class="stepper" id="stepper"></div>
+  <div class="card"><div id="stepContent"></div>
+    <div class="navrow">
+      <button class="btn-ghost" id="btnBack" onclick="go(step-1)">← Back</button>
+      <span style="font-size:13px;color:var(--muted)" id="stepOf">Step 1 of 6</span>
+      <button class="btn-primary" id="btnNext" onclick="go(step+1)">Next →</button>
+    </div>
+  </div>
+</div>
+
+<!-- PREVIEW DIALOG -->
+<div class="overlay" id="overlay" onclick="if(event.target===this)closeDialog()">
+  <div class="dialog">
+    <div class="dh">
+      <div class="seg" id="dFmt">
+        <button data-f="desktop" class="on" onclick="dSetFmt('desktop')">🖥 Desktop</button>
+        <button data-f="mobile" onclick="dSetFmt('mobile')">📱 Mobile</button>
+        <button data-f="hero" onclick="dSetFmt('hero')">🎬 Hero</button>
+      </div>
+      <div class="seg" id="dLang">
+        <button data-l="en" class="on" onclick="dSetLang('en')">EN</button>
+        <button data-l="zh" onclick="dSetLang('zh')">繁中</button>
+      </div>
+      <div style="display:flex;gap:7px">
+        <button class="btn-gold mini" onclick="dExport()">⬇︎ Download PNG</button>
+        <button class="btn-ghost mini" onclick="closeDialog()">✕ Close</button>
+      </div>
+    </div>
+    <div class="db"><div id="dScaler" style="transform-origin:top center"><div id="dHost"></div></div></div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* =================== DATA =================== */
+const CATALOG_PRICING = {
+ "Hydrating Cleanser":{ml:100,p:210},"Ultra Facial Toner":{ml:100,p:250},"Ultra Eye Cream":{ml:30,p:460},
+ "Rejuvenating Firming Facial Serum":{ml:30,p:410},"Rejuvenating Facial Serum":{ml:30,p:410},"Q10 Ultra Serum":{ml:30,p:820},
+ "Hydro-Moisturiser":{ml:50,p:260},"Hydro Moisturiser":{ml:50,p:260},"Rich Soothing Eye Cream":{ml:15,p:430},
+ "Rejuvenating Eye Serum":{ml:15,p:650},"Radiating Eye Cream":{ml:15,p:960},"Healing Night Cream":{ml:50,p:380},
+ "Deep Overnight Hydrating Night Cream":{ml:50,p:990},"Anti-Maskne Serum":{ml:30,p:430},"Anti-Acne":{ml:30,p:430},
+ "Anti-Mask":{ml:30,p:430},"Anti-Maskne":{ml:30,p:430},"Age Reverse Serum":{ml:30,p:780},"Bearberry Radiance Mask":{ml:50,p:690},
+ "Brightening Face Exfoliant":{ml:30,p:350},"CC Cream":{ml:30,p:450},"Calm & Correct CC Cream":{ml:30,p:450},
+ "Age Defense Mineral Sunscreen":{ml:50,p:320},"Instant Radiance Cream":{ml:50,p:680},"Hydrating Face Mask":{ml:50,p:360},
+ "Nourishing Body Wash":{ml:250,p:270},"Baby Shampoo & Body Wash":{ml:250,p:210},"Baby Shampoo":{ml:250,p:210},
+ "Balancing Conditioner":{ml:250,p:280},"Scalp Relieve Shampoo":{ml:250,p:280},"Silky Smoothing Conditioner":{ml:250,p:320},
+ "No No Dandruff Therapeutic Shampoo":{ml:250,p:290},"No No Dandruff":{ml:250,p:290},"All Vegan Massage Oil":{ml:100,p:290},
+ "All Vegan Nourishing Body Oil":{ml:100,p:290},"All Purpose Body Lotion":{ml:100,p:430},"No No Bug Spray":{ml:50,p:150},
+ "No No Itchy Gel":{ml:100,p:410},"Silky Smoothing Hair Serum":{ml:50,p:320},"Baby Bath Oil":{ml:100,p:250},
+ "Baby Day Cream":{ml:100,p:290},"Baby Mineral Sunscreen":{ml:30,p:250},"Baby Massage Oil":{ml:100,p:270},
+ "Baby Natural Bottom Cream":{ml:30,p:280},"Organic Baby Toner":{ml:50,p:260},"Organic Baby Lotion":{ml:100,p:290},
+ "Mom Hand Cream":{ml:50,p:180},"Instant-Fresh Room Spray":{ml:250,p:380},"Room Spray":{ml:250,p:380}
+};
+const CDN="https://cdn.shopify.com/s/files/1/0569/7496/6831/files/";
+const GIFTS=[{t:'[Gift] Age Reverse Serum Deluxe',z:'[禮品] 煥活細胞肌底修護液旅行裝',i:'https://cdn.shopify.com/s/files/1/0569/7496/6831/files/Ms-Chu-Age-Reverse-Serum-Deluxe.png?v=1735111672',n:0,s:[[15,470],[10,364]],v:0},
+{t:'[Gift] All Vegan Massage Oil',z:'[禮品] 純素舒緩按摩油旅行裝',i:'https://cdn.shopify.com/s/files/1/0569/7496/6831/files/Gift_-All-Vegan-Massage-Oil-Ms.-Chu-Soap-_-Beaut-254054321.jpg?v=1743005664',n:0,s:[[100,0],[50,0]],v:0},
+{t:'[Gift] Anti-Maskne Serum Travel/ Deluxe Size',z:'【禮物】去口罩痘精華 旅行/體驗裝',i:'https://cdn.shopify.com/s/files/1/0569/7496/6831/files/Gift_-Anti-Maskne-Serum-Deluxe-Ms.-Chu-Soap-_-Beaut-269278474.jpg?v=1769004481',n:0,s:[[15,301]],v:0},
+{t:'[Gift] Baby Day Cream',z:'[禮品] 嬰兒純天然水潤護膚霜',i:'https://cdn.shopify.com/s/files/1/0569/7496/6831/files/Gift_-Baby-Day-Cream-Ms.-Chu-Soap-_-Beaut-260957554.jpg?v=1746771989',n:0,s:[[100,0]],v:0},
+{t:'[Gift] Baby Mineral Sunscreen SPF50+',z:'',i:'https://cdn.shopify.com/s/files/1/0569/7496/6831/files/Gift_-Anti-Maskne-Serum-Deluxe-Ms.-Chu-Soap-_-Beaut-269278336.jpg?v=1775018468',n:0,s:[[30,0]],v:0},
+{t:'[Gift] Baby Shampoo & Body Wash Deluxe',z:'【禮物】嬰兒有機洗頭沐浴液旅行裝',i:'https://cdn.shopify.com/s/files/1/0569/7496/6831/files/Baby-Shampoo-_-Body-Wash-Deluxe-Ms.-Chu-Soap-_-Beaut-230036450.jpg?v=1729504376',n:0,s:[[50,90]],v:0},
+{t:'[Gift] Balancing Conditioner Travel Size',z:'【禮物】有機均衡潤髮乳旅行裝',i:'https://cdn.shopify.com/s/files/1/0569/7496/6831/files/Gift_-Balancing-Conditioner-Travel-Size-Ms.-Chu-Soap-_-Beaut-267898217.jpg?v=1762231292',n:0,s:[[50,80]],v:0},
+{t:'[Gift] Bearberry Radiance Mask Deluxe',z:'[禮品] 瞬間滋潤亮白面膜旅行裝',i:'https://cdn.shopify.com/s/files/1/0569/7496/6831/files/Gift_-Bearberry-Radiance-Mask-Deluxe-Ms.-Chu-Soap-_-Beaut-240818844.jpg?v=1735117452',n:0,s:[[15,250]],v:0},
+{t:'[Gift] Brightening Face Exfoliant Full Size',z:'[禮品] 亮白核桃殼去角質乳',i:'https://cdn.shopify.com/s/files/1/0569/7496/6831/files/Gift_-Brightening-Face-Exfoliant-Full-Size-Ms.-Chu-Soap-_-Beaut-262240442.jpg?v=1747914953',n:0,s:[[30,0]],v:0},
+{t:'[Gift] Healing Night Cream Travel/ Deluxe Size',z:'【禮物】極致修護晚霜 旅行/體驗裝',i:'https://cdn.shopify.com/s/files/1/0569/7496/6831/files/PHOTO-2026-07-28-12-51-07.jpg?v=1785494251',n:0,s:[[15,160],[12,128]],v:0},
+{t:'[Gift] Hydrating Cleanser Travel/ Deluxe Size',z:'【禮物】敏感肌保濕潔面乳 旅行/體驗裝',i:'https://cdn.shopify.com/s/files/1/0569/7496/6831/files/PHOTO-2026-07-27-18-36-20_a4c67f4f-aa3e-416a-84ef-24fd43d16b91.jpg?v=1785472189',n:0,s:[[30,76],[17,43],[15,38]],v:0},
+{t:'[Gift] Hydro-Moisturiser Travel/ Deluxe Size',z:'【禮物】敏感肌保濕乳 旅行/體驗裝',i:'https://cdn.shopify.com/s/files/1/0569/7496/6831/files/Gift-Hydro-Moisturiser-Deluxe-15mL.jpg?v=1785499408',n:0,s:[[15,160],[12,128],[8,86]],v:0},
+{t:'[Gift] Instant-Fresh Room Spray (Bergamot Citrus Scent)',z:'[禮品] 奢華天然香薰室內噴霧',i:'https://cdn.shopify.com/s/files/1/0569/7496/6831/files/Instant-Fresh-Room-Spray-Travel-_Gift_-Ms.-Chu-Soap-_-Beaut-240804640.jpg?v=1735111672',n:0,s:[[250,0],[30,0]],v:0},
+{t:'[Gift] Instant-Fresh Room Spray (Rose Geranium Scent)',z:'奢華天然香薰室內噴霧 （天竺葵玫瑰天然花香）Gift',i:'https://cdn.shopify.com/s/files/1/0569/7496/6831/files/Instant-Fresh-Room-Spray-Travel-_Gift_-Ms.-Chu-Soap-_-Beaut-240804640.jpg?v=1735111672',n:0,s:[[250,0],[30,0]],v:0},
+{t:'[Gift] Micellar Water Makeup Remover Travel/ Deluxe Size',z:'【禮物】卸妝潔膚水 旅行/體驗裝',i:'https://cdn.shopify.com/s/files/1/0569/7496/6831/files/micellar-water-17ml.jpg?v=1785486626',n:0,s:[[17,55]],v:0},
+{t:'[Gift] Mom Hand Cream',z:'[禮品] 極度深層保濕潤手霜',i:'https://cdn.shopify.com/s/files/1/0569/7496/6831/files/Gift_-Mom-Hand-Cream-Ms.-Chu-Soap-_-Beaut-240807885.jpg?v=1735114606',n:1,s:[],v:0},
+{t:'[Gift] Ms. Chu Oversized Tote Bag',z:'[禮品] Ms. Chu 特大環保袋',i:'https://cdn.shopify.com/s/files/1/0569/7496/6831/files/Gift_-Healing-Night-Cream-Deluxe-Ms.-Chu-Soap-_-Beaut-257097025.jpg?v=1740104367',n:1,s:[],v:350},
+{t:'[Gift] Ms. Chu Plush Toy (size S)',z:'Ms. Chu 毛絨 鑰匙扣',i:'https://cdn.shopify.com/s/files/1/0569/7496/6831/files/Gift_-Anti-Maskne-Serum-Deluxe-Ms.-Chu-Soap-_-Beaut-269278336.jpg?v=1775018468',n:1,s:[],v:130},
+{t:'[Gift] Ms. Chu Recycle Bag | Foldable Eco-Friendly Shopping Bag',z:'【禮物】 Ms. Chu 環保購物袋 | 可摺疊輕便手提袋',i:'https://cdn.shopify.com/s/files/1/0569/7496/6831/files/Ms-Chu-Tote-Bag-2025Summer-EN.jpg?v=1754039832',n:1,s:[],v:180},
+{t:'[Gift] Ms. Chu Tote Bag Summer 2025 Limited Edition',z:'[禮品] Ms. Chu 2025夏日限量版環保袋',i:'https://cdn.shopify.com/s/files/1/0569/7496/6831/files/Gift_-Ms.-Chu-Tote-Bag-Winter-2025-Limited-Edition-Ms.-Chu-Soap-_-Beaut-267898359.jpg?v=1762231557',n:1,s:[],v:0},
+{t:'[Gift] Ms. Chu Tote Bag Winter 2025 Limited Edition',z:'[禮品] Ms. Chu 2025冬日限量版環保袋',i:'https://cdn.shopify.com/s/files/1/0569/7496/6831/files/GIft_-Ms.-Chu-Christmas-Greeting-Card-_1-card_-Ms.-Chu-Soap-_-Beaut-268066283.jpg?v=1762664690',n:1,s:[],v:0},
+{t:'[Gift] No No Bug Spray Travel Size',z:'[禮品] 全天然防蚊噴霧旅行裝',i:'https://cdn.shopify.com/s/files/1/0569/7496/6831/files/no-no-bug-spray-_travel-size_-ms.-chu-soap-_-beaut-260800975_720x_922320d0-dbaf-4d7c-88d3-f9df361608de.webp?v=1756892474',n:0,s:[[25,90]],v:0},
+{t:'[Gift] No No Dandruff Therapeutic Shampoo Deluxe',z:'【禮物】預防/去除頭皮洗頭水 體驗裝',i:'https://cdn.shopify.com/s/files/1/0569/7496/6831/files/No-No-Dandruff-Therapeutic-Shampoo-_Travel-Size_-Ms.-Chu-Soap-_-Beaut-253457688.jpg?v=1743005660',n:0,s:[[50,105]],v:0},
+{t:'[Gift] No No Itchy Gel',z:'[禮品] 全天然止癢膏',i:'https://cdn.shopify.com/s/files/1/0569/7496/6831/files/no-no-itchy-gelbody-001-100-699234.jpg?v=1719638412',n:0,s:[[100,410],[20,110]],v:0},
+{t:'[Gift] Nourishing Body Wash Travel Size',z:'[禮品] 有機滋養沐浴液旅行裝',i:'https://cdn.shopify.com/s/files/1/0569/7496/6831/files/Gift_-Nourishing-Body-Wash-Travel-Size-Ms.-Chu-Soap-_-Beaut-265255820.jpg?v=1755964953',n:0,s:[[50,90]],v:0},
+{t:'[Gift] Organic Baby Lotion',z:'[禮品] 嬰兒純天然護膚霜 100毫升',i:'https://cdn.shopify.com/s/files/1/0569/7496/6831/files/ly_ms-chu-baby-lotion-200ml-cn__1766393280.jpg?v=1766393282',n:1,s:[],v:290},
+{t:'[Gift] Organic Baby Toner',z:'[禮品] 有機天然嬰兒爽膚水',i:'https://cdn.shopify.com/s/files/1/0569/7496/6831/files/Gift_-Baby-Shampoo-_-Body-Wash-Ms.-Chu-Soap-_-Beaut-260947079.jpg?v=1746766776',n:0,s:[[50,200]],v:0},
+{t:'[Gift] Q10 Ultra Serum Travel/ Deluxe Size',z:'【禮物】Q10超濃縮精華油 旅行/體驗裝',i:'https://cdn.shopify.com/s/files/1/0569/7496/6831/files/Gift_-Anti-Maskne-Serum-Deluxe-Ms.-Chu-Soap-_-Beaut-269278336.jpg?v=1775018468',n:0,s:[[15,575],[7,385]],v:0},
+{t:'[Gift] Rejuvenating Eye Serum',z:'[禮品] 激活眼部水潤精華旅行裝',i:'https://cdn.shopify.com/s/files/1/0569/7496/6831/files/Gift_-Rejuvenating-Eye-Serum-Deluxe-Ms.-Chu-Soap-_-Beaut-240838799.jpg?v=1735175203',n:0,s:[[10,607]],v:0},
+{t:'[Gift] Rejuvenating Facial Serum Travel/ Deluxe Size',z:'【禮物】激活緊緻面部精華 旅行/體驗裝',i:'https://cdn.shopify.com/s/files/1/0569/7496/6831/files/PHOTO-2026-07-27-18-36-21.jpg?v=1785502078',n:0,s:[[15,403],[7,188],[5,135]],v:0},
+{t:'[Gift] Rich Soothing Eye Cream Travel/ Deluxe Size',z:'【禮物】極致修護眼霜 旅行/體驗裝',i:'https://cdn.shopify.com/s/files/1/0569/7496/6831/files/Gift-Rich-Soothing-Eye-Cream-Travel-5mL.png?v=1785500450',n:0,s:[[7,281],[5,281],[3,121]],v:0},
+{t:'[Gift] Scalp Relieve Shampoo Deluxe',z:'【禮物】有機頭皮舒緩洗頭水旅行裝',i:'https://cdn.shopify.com/s/files/1/0569/7496/6831/files/PHOTO-2026-08-05-10-46-38.jpg?v=1785898074',n:0,s:[[50,105]],v:0},
+{t:'[Gift] Ultra Eye Cream',z:'[禮品] 眼部保濕霜',i:'https://cdn.shopify.com/s/files/1/0569/7496/6831/files/Gift_-Ultra-Eye-Cream-Ms.-Chu-Soap-_-Beaut-267229061.jpg?v=1761148941',n:0,s:[[30,0]],v:0},
+{t:'[Gift] Ultra Facial Toner Travel/ Deluxe Size',z:'【禮物】特效清爽保濕爽膚水 旅行/體驗裝',i:'https://cdn.shopify.com/s/files/1/0569/7496/6831/files/WJmeLLybFRfrwITL_7cdec81d-238f-4ae4-bc76-01b65df33693.jpg?v=1785479026',n:0,s:[[30,105],[17,60],[15,53]],v:0},
+{t:'[Gift] Unisex Water Repellent Travel Bag',z:'[禮品] 中性防水大旅行袋',i:'https://cdn.shopify.com/s/files/1/0569/7496/6831/files/Gift_-Unisex-Water-Repellent-Travel-Bag-Ms.-Chu-Soap-_-Beaut-240819988.jpg?v=1735121333',n:1,s:[],v:600},
+{t:'Age Reverse Serum Travel/ Deluxe',z:'煥活細胞肌底修護液/ 15mL (旅行裝）',i:'https://cdn.shopify.com/s/files/1/0569/7496/6831/files/Age-Reverse-Serum-Deluxe-Ms.-Chu-Soap-_-Beaut-21354839.jpg?v=1774108850',n:0,s:[[15,470]],v:0},
+{t:'All Vegan Massage Oil Travel Size',z:'純素舒緩按摩油',i:'https://cdn.shopify.com/s/files/1/0569/7496/6831/files/All-Vegan-Massage-Oil-Ms.-Chu-Soap-_-Beaut-76725046.jpg?v=1743005094',n:0,s:[[50,290]],v:0},
+{t:'Anti-Mask/Acne Serum Deluxe',z:'天然抗口罩肌精華',i:'https://cdn.shopify.com/s/files/1/0569/7496/6831/files/Gift_-Anti-Maskne-Serum-Deluxe-Ms.-Chu-Soap-_-Beaut-269278474.jpg?v=1769004481',n:0,s:[[15,280]],v:0},
+{t:'Anti-Maskne Serum Travel/ Deluxe',z:'去口罩痘精華 旅行/體驗裝',i:'',n:0,s:[[15,301]],v:0},
+{t:'Baby Shampoo & Body Wash Deluxe',z:'',i:'https://cdn.shopify.com/s/files/1/0569/7496/6831/files/Nourishing-Body-Wash-_Travel-Size_-Ms.-Chu-Soap-_-Beaut-260416242.jpg?v=1745453811',n:1,s:[],v:90},
+{t:'Balancing Conditioner Deluxe',z:'',i:'https://cdn.shopify.com/s/files/1/0569/7496/6831/files/Screenshot2023-12-16at6.31.39PM.png?v=1719637979',n:0,s:[[50,0]],v:0},
+{t:'Bearberry Radiance Mask Deluxe',z:'[禮品] 瞬間滋潤亮白面膜旅行裝',i:'',n:0,s:[[15,250]],v:0},
+{t:'CCCreamLaunch (FREE Travel Set)',z:'',i:'https://cdn.shopify.com/s/files/1/0569/7496/6831/files/CCCreamLaunch-_FREE-Travel-Set_-Ms.-Chu-Soap-_-Beaut-270213238.png?v=1774109008',n:1,s:[],v:128},
+{t:'Diamond Birthday Gift (Lip Gloss - Lime) And Jute Bag',z:'鑽石會員生日禮物 (有機唇彩 - 清爽青檸)',i:'https://cdn.shopify.com/s/files/1/0569/7496/6831/files/Gold-Birthday-Gift-_SMILE_-Ms.-Chu-Soap-_-Beaut-270077612.png?v=1772892209',n:1,s:[],v:350},
+{t:'Diamond Birthday Gift (Lip Gloss - Strawberry) And Jute Bag',z:'鑽石會員生日禮物 (有機唇彩 - 幸福草莓)',i:'https://cdn.shopify.com/s/files/1/0569/7496/6831/files/Gold-Birthday-Gift-_SMILE_-Ms.-Chu-Soap-_-Beaut-270077612.png?v=1772892209',n:1,s:[],v:350},
+{t:'Diamond Birthday Gift (Room Spray - Bergamot Citrus) And Jute Bag',z:'鑽石會員生日禮物 (奢華天然香薰室內噴霧 - 佛手柑柑橘天然香味)',i:'https://cdn.shopify.com/s/files/1/0569/7496/6831/files/Gold-Birthday-Gift-_SMILE_-Ms.-Chu-Soap-_-Beaut-270077612.png?v=1772892209',n:1,s:[],v:350},
+{t:'Diamond Birthday Gift (Room Spray - Rose Geranium) And Jute Bag',z:'鑽石會員生日禮物 (奢華天然香薰室內噴霧 - 天竺葵玫瑰天然花香)',i:'https://cdn.shopify.com/s/files/1/0569/7496/6831/files/Gold-Birthday-Gift-_SMILE_-Ms.-Chu-Soap-_-Beaut-270077612.png?v=1772892209',n:1,s:[],v:350},
+{t:'Gold Birthday Gift (Jute Bag)',z:'金會員生日禮物 （Ms. Chu 環保麻布袋）',i:'https://cdn.shopify.com/s/files/1/0569/7496/6831/files/Gold-Birthday-Gift-_SMILE_-Ms.-Chu-Soap-_-Beaut-270077612.png?v=1772892209',n:1,s:[],v:350},
+{t:'Hair & Body Care Travel Set | Natural Shampoo & Body Wash | Sensitive Skin',z:'頭髮身體護理旅行套裝(4支裝)',i:'https://cdn.shopify.com/s/files/1/0569/7496/6831/files/Hair-_-Body-Care-Travel-Set-Ms.-Chu-Soap-_-Beaut-270425975.png?v=1774170453',n:1,s:[],v:430},
+{t:'Healing Night Cream Deluxe',z:'強效修護晚霜',i:'https://cdn.shopify.com/s/files/1/0569/7496/6831/files/Healing-Night-Cream-Deluxe-_Gift_-Ms.-Chu-Soap-_-Beaut-21355428.jpg?v=1743005460',n:0,s:[[12,0]],v:0},
+{t:'Healing Night Cream Travel/ Deluxe',z:'極致修護晚霜 旅行/體驗裝',i:'https://cdn.shopify.com/s/files/1/0569/7496/6831/files/Gift_-Healing-Night-Cream-Deluxe-Ms.-Chu-Soap-_-Beaut-257096946.jpg?v=1740104102',n:0,s:[[15,160],[12,128]],v:0},
+{t:'Hydrating Cleanser Pre Deluxe',z:'特效保濕洗面乳 (升級配方)',i:'',n:0,s:[[17,140]],v:0},
+{t:'Hydrating Cleanser Travel/ Deluxe',z:'敏感肌保濕潔面乳 旅行/體驗裝',i:'https://cdn.shopify.com/s/files/1/0569/7496/6831/files/Hydrating-Cleanser-Deluxe-Ms.-Chu-Soap-_-Beaut-236303743.jpg?v=1731930193',n:0,s:[[30,76],[17,43],[15,38]],v:0},
+{t:'Hydrating Travel Set | Sensitive Skin',z:'補濕旅行套裝(7件裝)',i:'https://cdn.shopify.com/s/files/1/0569/7496/6831/files/travel-set-offer-summer-nologo.png?v=1784726480',n:1,s:[],v:999},
+{t:'Hydro-Moisturiser Travel/ Deluxe',z:'敏感肌保濕乳 旅行/體驗裝',i:'https://cdn.shopify.com/s/files/1/0569/7496/6831/files/D427CA37-CB1D-4664-A638-1E68A3D2327D.jpg?v=1785933363',n:0,s:[[15,160],[12,128],[8,86]],v:0},
+{t:'Micellar Water Makeup Remover Travel/ Deluxe',z:'卸妝潔膚水 旅行/體驗裝',i:'https://cdn.shopify.com/s/files/1/0569/7496/6831/files/PHOTO-2026-07-31-12-34-04.jpg?v=1785486525',n:0,s:[[17,55]],v:0},
+{t:'Ms. Chu Hydrating Travel Set Pouch',z:'',i:'https://cdn.shopify.com/s/files/1/0569/7496/6831/files/Ms.-Chu-Hydrating-Travel-Set-Pouch-Ms.-Chu-Soap-_-Beaut-270386146.png?v=1773935281',n:1,s:[],v:50},
+{t:'Ms. Chu Jute Bag (Gift)',z:'',i:'https://cdn.shopify.com/s/files/1/0569/7496/6831/files/Ms.-Chu-Jute-Bag-_Gift_-Ms.-Chu-Soap-_-Beaut-21351487.jpg?v=1743005245',n:1,s:[],v:350},
+{t:'Ms. Chu Travel Toiletry Pouch',z:'Ms. Chu 旅行化妝收納袋',i:'https://cdn.shopify.com/s/files/1/0569/7496/6831/files/Ms.-Chu-Travel-Toiletry-Pouch-Ms.-Chu-Soap-_-Beaut-60046794.jpg?v=1743005652',n:1,s:[],v:180},
+{t:'Natural Organic Baby Gift Pack',z:'天然有機嬰兒禮物盒',i:'https://cdn.shopify.com/s/files/1/0569/7496/6831/files/Natural-Organic-Baby-Gift-Pack-Ms.-Chu-Soap-_-Beaut-60050047.jpg?v=1743005417',n:1,s:[],v:1320},
+{t:'No No Bug Spray (Travel Size)',z:'全天然防蚊噴霧',i:'https://cdn.shopify.com/s/files/1/0569/7496/6831/files/No-No-Bug-Spray-_Travel-Size_-Ms.-Chu-Soap-_-Beaut-260800975.jpg?v=1748188999',n:0,s:[[25,90]],v:0},
+{t:'No No Dandruff Therapeutic Shampoo (Travel Size)',z:'',i:'https://cdn.shopify.com/s/files/1/0569/7496/6831/files/No-No-Dandruff-Therapeutic-Shampoo-_Travel-Size_-Ms.-Chu-Soap-_-Beaut-253457688.jpg?v=1743005660',n:0,s:[[50,90]],v:0},
+{t:'Nourishing Body Wash Deluxe',z:'',i:'https://cdn.shopify.com/s/files/1/0569/7496/6831/files/BodyWashV2copy_b774f9c9-ce8e-4f14-933b-13bf347b4ea4.jpg?v=1719637983',n:0,s:[[50,0]],v:0},
+{t:'Nourishing Body Wash Deluxe',z:'',i:'https://cdn.shopify.com/s/files/1/0569/7496/6831/files/Nourishing-Body-Wash-_Travel-Size_-Ms.-Chu-Soap-_-Beaut-260416384.jpg?v=1745596927',n:1,s:[],v:90},
+{t:'Organic Baby Lotion Travel Size 50mL',z:'有機嬰兒潤膚乳旅行裝 50mL',i:'https://cdn.shopify.com/s/files/1/0569/7496/6831/files/PHOTO-2026-07-31-13-49-394.jpg?v=1785482292',n:0,s:[[50,200]],v:0},
+{t:'Premium Organic Baby Gift Hamper 2',z:'天然有機嬰兒禮物盒',i:'',n:1,s:[],v:1400},
+{t:'Q10 Ultra Serum Travel/ Deluxe',z:'Q10超濃縮精華油 旅行/體驗裝',i:'https://cdn.shopify.com/s/files/1/0569/7496/6831/files/PHOTO-2026-07-27-18-36-213.jpg?v=1785486518',n:0,s:[[15,575]],v:0},
+{t:'Rejuvenating Eye Serum Travel/ Deluxe',z:'激活眼部水潤精華',i:'https://cdn.shopify.com/s/files/1/0569/7496/6831/files/Mother_s-Day-Promotion-Set-Ms.-Chu-Soap-_-Beaut-260607979.jpg?v=1748188933',n:0,s:[[10,0]],v:0},
+{t:'Rejuvenating Facial Serum Travel/ Deluxe',z:'激活緊緻面部精華 旅行/體驗裝',i:'https://cdn.shopify.com/s/files/1/0569/7496/6831/files/Rejuvenating-Facial-Serum-Ms.-Chu-Soap-_-Beaut-76971350.jpg?v=1743005169',n:0,s:[[15,403],[7,188],[5,135]],v:0},
+{t:'Rich Soothing Eye Cream Travel/ Deluxe',z:'極致修護眼霜 旅行/體驗裝',i:'https://cdn.shopify.com/s/files/1/0569/7496/6831/files/Rich-Soothing-Eye-Cream-Ms.-Chu-Soap-_-Beaut-267895929.jpg?v=1763740887',n:0,s:[[7,281],[5,281],[3,121]],v:0},
+{t:'Scalp Relieve Shampoo Deluxe',z:'',i:'https://cdn.shopify.com/s/files/1/0569/7496/6831/files/PHOTO-2026-08-05-10-46-38_6f73c790-9f30-4f40-8425-f94c1bda3e4f.jpg?v=1785898122',n:0,s:[[50,105]],v:0},
+{t:'Silky Smoothing Conditioner Deluxe',z:'有機滋養頭髮護髮素旅行裝',i:'https://cdn.shopify.com/s/files/1/0569/7496/6831/files/Silky-Smoothing-Conditioner-Deluxe-Ms.-Chu-Soap-_-Beaut-265754966.jpg?v=1755483859',n:0,s:[[50,100]],v:0},
+{t:'Ultra Facial Toner Travel/ Deluxe',z:'特效清爽保濕爽膚水 旅行/體驗裝',i:'https://cdn.shopify.com/s/files/1/0569/7496/6831/files/Ultra-Facial-Toner-17mL-_Gift_-Ms.-Chu-Soap-_-Beaut-269407490.jpg?v=1771516896',n:0,s:[[30,105],[15,58]],v:0},
+{t:'Unisex Water Repellent Travel Bag',z:'中性防水大旅行袋',i:'https://cdn.shopify.com/s/files/1/0569/7496/6831/files/Unisex-Water-Repellent-Travel-Bag-Ms.-Chu-Soap-_-Beaut-224151295.jpg?v=1743005657',n:1,s:[],v:600}];
+const THEMES=[
+ {id:"summer",label:"Summer",zh:"夏日",em:"☀️",badge:"#D4AF37"},
+ {id:"festive",label:"Festive",zh:"節日",em:"🎉",badge:"#C41E3A"},
+ {id:"spring",label:"Spring",zh:"春天",em:"🌸",badge:"#FF69B4"},
+ {id:"cny",label:"CNY",zh:"新年",em:"🧧",badge:"#C41E3A"},
+ {id:"autumn",label:"Autumn",zh:"秋天",em:"🍂",badge:"#D2691E"},
+ {id:"wellness",label:"Wellness",zh:"養生",em:"🌿",badge:"#2E8B57"}
+];
+const STR={
+ header:{en:"The More You Shop, The More You Get!",zh:"買越多，賞越多！"},
+ sub:{en:"Spend more · Get more · Pamper yourself every step!",zh:"消費越多 · 獲贈越多 · 寵愛自己每一步！"},
+ ship:{en:"Free Shipping",zh:"免運費"},inOrder:{en:"IN ONE ORDER",zh:"單一訂單"},
+ disc:{en:"*Promotion offer while supplies last. In the event of any dispute, Ms. Chu Soap and Beaut's decision shall be final and conclusive.",zh:"*優惠數量有限，送完即止。如有任何爭議，Ms. Chu Soap and Beaut 保留最終決定權。"},
+ valueD:{en:"= VALUE",zh:"= 價值"},valueM:{en:"= VALUE",zh:"優惠價值"},
+ spendOver:{en:"SPEND OVER:",zh:"消費滿："},cta:{en:"Get your deal now",zh:"立即搶購優惠"},valueH:{en:"Value",zh:"價值"}
+};
+const STEP_LABELS=["Theme","Tiers","Gifts","Values","Preview","Generate"];
+const LOGO="data:image/svg+xml;utf8,"+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="220" height="220" viewBox="0 0 220 220"><circle cx="110" cy="110" r="104" fill="#ffffff" stroke="#1B365D" stroke-width="3"/><text x="110" y="104" font-family="Georgia,\'Times New Roman\',serif" font-style="italic" font-weight="bold" font-size="52" fill="#1B365D" text-anchor="middle">Ms. Chu</text><line x1="58" y1="122" x2="162" y2="122" stroke="#D4AF37" stroke-width="1.4"/><text x="110" y="150" font-family="Arial,sans-serif" font-size="15" letter-spacing="3" fill="#1B365D" text-anchor="middle">SOAP &amp; BEAUT</text></svg>');
+const PX="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=";
+
+/* =================== STATE =================== */
+let step=1, maxReached=1, dragSrc=null, dFmt="desktop", dLang="en";
+let state=defaultState();
+function defaultState(){return{
+  theme:"summer", promoName:"", customPrompt:"",
+  customBg:null, mobileBg:null, logo:null, seasonalBadge:null,
+  tiers:[
+    {id:"1",amount:500,gifts:[],hidden:false},
+    {id:"2",amount:700,gifts:[newGift("Hydrating Cleanser",15)],hidden:false},
+    {id:"3",amount:1000,gifts:[newGift("Healing Night Cream",15)],hidden:false}
+  ]
+};}
+function uid(){return 'g'+Math.random().toString(36).slice(2,8)}
+function newGift(match,ml){
+  const p=GIFTS.find(x=>x.n===0 && x.t.toLowerCase().includes(match.toLowerCase()))||null;
+  const cat=CATALOG_PRICING[match]||lookupCatalog(match)||{ml:0,p:0};
+  const g={id:uid(),title:p?p.t:(match||""),titleZh:p?p.z:"",sizeMl:ml||5,valueHkd:0,estimated:true,img:p?p.i:null,fullPriceHkd:cat.p||0,fullSizeMl:cat.ml||0,nonMl:false,sizeOpts:p?p.s:null,hidden:false};
+  const r=giftValueFor(g);g.valueHkd=r.val;g.estimated=r.est;return g;
+}
+/* Resolve a gift's value: real Shopify per-size price if > 0, else the 40% per-mL formula. */
+function giftValueFor(g){
+  if(g.nonMl)return {val:+g.valueHkd||0,est:false};
+  let v=0;if(g.sizeOpts&&g.sizeOpts.length){const hit=g.sizeOpts.find(o=>o[0]===g.sizeMl);if(hit)v=hit[1];}
+  if(v>0)return {val:v,est:false};
+  return {val:calcVal(g.fullPriceHkd,g.fullSizeMl,g.sizeMl),est:true};
+}
+/* formula */
+function calcVal(fullP,fullMl,sizeMl,premium){premium=premium==null?40:premium;if(!fullP||!fullMl||!sizeMl)return 0;const perMl=fullP/fullMl;return Math.round(perMl*(1+premium/100)*sizeMl/5)*5;}
+function normalizeTitle(t){return(t||"").replace(/\[Gift\]/gi,"").replace(/Travel\s*\/\s*Deluxe|Travel\s*Size|Deluxe/gi,"").replace(/\(Sample\)/gi,"").replace(/\(\d+\s*m[lL]\)/gi,"").replace(/\/\s*(TierGift|PointRedemption)/gi,"").replace(/\|.*$/,"").replace(/\s+/g," ").trim();}
+function lookupCatalog(title){const n=normalizeTitle(title);if(CATALOG_PRICING[n])return{name:n,...CATALOG_PRICING[n]};for(const k in CATALOG_PRICING){if(n.toLowerCase().includes(k.toLowerCase()))return{name:k,...CATALOG_PRICING[k]};}return null;}
+
+/* =================== STORAGE (Saved Promotions + Background Library) =================== */
+function lsGet(k,def){try{const v=localStorage.getItem(k);return v?JSON.parse(v):def;}catch(e){return def;}}
+function lsSet(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}
+let savedPromos=lsGet('mschu_promos',[]);
+let bgLib={desktop:lsGet('mschu_bg_desktop',[]),mobile:lsGet('mschu_bg_mobile',[])};
+
+/* =================== STEPPER =================== */
+function buildStepper(){
+  const s=document.getElementById('stepper');s.innerHTML='';
+  STEP_LABELS.forEach((lbl,i)=>{
+    const n=i+1;const d=document.createElement('div');
+    d.className='stp'+(n===step?' active':'')+(n<step?' done':'');
+    d.onclick=()=>{if(n<step||n<=maxReached)go(n);};
+    d.innerHTML=`<div class="dot">${n<step?'✓':n}</div><div class="lbl">${lbl}</div>`;
+    s.appendChild(d);
+    if(i<STEP_LABELS.length-1){const b=document.createElement('div');b.className='conn';s.appendChild(b);}
+  });
+  document.getElementById('stepOf').textContent=`Step ${step} of 6`;
+  document.getElementById('btnBack').style.visibility=step>1?'visible':'hidden';
+  document.getElementById('btnNext').style.visibility=step<6?'visible':'hidden';
+}
+function go(n){if(n<1||n>6)return;step=n;maxReached=Math.max(maxReached,n);buildStepper();renderStep();window.scrollTo({top:0,behavior:'smooth'});}
+
+/* =================== STEP RENDER =================== */
+function renderStep(){
+  const c=document.getElementById('stepContent');
+  c.innerHTML = step===1?stepTheme():step===2?stepTiers():step===3?stepGifts():step===4?stepValues():step===5?stepPreview():stepGenerate();
+}
+
+/* ---- STEP 1 ---- */
+function stepTheme(){
+  const g=THEMES.map(t=>`<div class="theme${state.theme===t.id?' sel':''}" onclick="setTheme('${t.id}')"><div class="em">${t.em}</div><div class="nm">${t.label}</div><div class="zh">${t.zh}</div></div>`).join('');
+  const saved=savedPromos.length?savedPromos.map(p=>`<div class="savedcard"><div class="nm">${escH(p.name||'Untitled')}</div><div class="mt">${THEMES.find(x=>x.id===p.theme)?.em||''} ${escH(p.theme||'')} · ${p.date||''}</div><div style="display:flex;gap:6px;margin-top:auto"><button class="btn-ghost mini" onclick="loadPromo('${p.id}')">Load</button><button class="btn-danger mini" onclick="delPromo('${p.id}')">Delete</button></div></div>`).join('')
+    :`<div class="savedcard empty">No saved promotions yet</div><div class="savedcard empty">Save from the Generate step</div>`;
+  return `<div class="step-title">Choose a Theme</div><div class="step-desc">Select a visual theme for your promotion banners</div>
+   <label class="f">Promotion Name</label>
+   <input type="text" value="${escA(state.promoName)}" placeholder="e.g., July 2026 Summer Promotion" oninput="state.promoName=this.value">
+   <div class="hint">Give this promotion a name for saving and reference</div>
+   <div class="sep"></div><div class="themegrid">${g}</div>
+   <div class="sep"></div><label class="f">Custom Theme Prompt (optional)</label>
+   <input type="text" value="${escA(state.customPrompt)}" placeholder="e.g., Tropical paradise with palm leaves and ocean waves..." oninput="state.customPrompt=this.value">
+   <div class="hint">Add extra details to customize the banner style beyond the preset theme</div>
+   <div class="sep"></div><div class="step-title" style="font-size:15px">Saved Promotions</div><div class="saved" style="margin-top:10px">${saved}</div>
+   <div class="sep"></div><div class="step-title" style="font-size:15px">Background Library</div>
+   <div class="hint">Save reusable background images, then click one to apply it.</div>
+   ${bgLibBlock('desktop')}${bgLibBlock('mobile')}`;
+}
+function setTheme(id){state.theme=id;renderStep();}
+function bgLibBlock(kind){
+  const lib=bgLib[kind]; const cur=kind==='desktop'?state.customBg:state.mobileBg;
+  const thumbs=lib.map(b=>`<div class="bgthumb ${kind}${cur===b.data?' sel':''}"><img src="${b.data}" onclick="applyBg('${kind}','${b.id}')"><button class="del" onclick="delBg('${kind}','${b.id}')">✕</button></div>`).join('');
+  return `<label class="f">${kind==='desktop'?'Desktop backgrounds (16:9)':'Mobile backgrounds (9:16)'}</label>
+   <div class="thumbrow">${thumbs||'<span class="hint">None saved yet.</span>'}</div>
+   <button class="btn-ghost mini" style="margin-top:8px" onclick="document.getElementById('bglib-${kind}').click()">+ Upload to library</button>
+   <input type="file" id="bglib-${kind}" accept="image/*" style="display:none" onchange="uploadBgLib(event,'${kind}')">`;
+}
+function uploadBgLib(ev,kind){const f=ev.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{bgLib[kind].push({id:uid(),label:f.name,data:r.result});lsSet('mschu_bg_'+kind,bgLib[kind]);renderStep();toast('Saved to library');};r.readAsDataURL(f);ev.target.value='';}
+function applyBg(kind,id){const b=bgLib[kind].find(x=>x.id===id);if(!b)return;if(kind==='desktop')state.customBg=b.data;else state.mobileBg=b.data;renderStep();toast('Background applied');}
+function delBg(kind,id){bgLib[kind]=bgLib[kind].filter(x=>x.id!==id);lsSet('mschu_bg_'+kind,bgLib[kind]);renderStep();}
+
+/* ---- STEP 2 ---- */
+function stepTiers(){
+  const rows=state.tiers.map((t,i)=>`<div class="tier"><div class="tier-h"><span class="badge">Tier ${i+1}</span>
+     <span style="font-size:13px;color:var(--muted)">Spend HKD$</span>
+     <input type="number" style="max-width:120px" min="0" step="100" value="${t.amount}" oninput="state.tiers[${i}].amount=+this.value||0">
+     ${i===0?'<span class="badge green">🚚 free-ship tier</span>':''}
+     <button class="btn-danger mini" style="margin-left:auto" onclick="removeTier('${t.id}')">🗑</button></div></div>`).join('');
+  return `<div class="step-title">Configure Tiers</div><div class="step-desc">Set purchase amount thresholds for each promotion tier. The lowest tier is free-shipping only.</div>
+   ${rows}<button class="btn-ghost" style="width:100%;margin-top:6px" onclick="addTier()">+ Add Tier</button>`;
+}
+function addTier(){const last=state.tiers[state.tiers.length-1];state.tiers.push({id:uid(),amount:(last?last.amount:0)+500,gifts:[],hidden:false});renderStep();}
+function removeTier(id){if(state.tiers.length<=1){toast('At least one tier is required');return;}state.tiers=state.tiers.filter(t=>t.id!==id);renderStep();}
+
+/* ---- STEP 3 ---- */
+function stepGifts(){
+  let out=`<div class="step-title">Select Gift Products</div><div class="step-desc">Search your synced Shopify gift catalog (74 products). Pick a product, tap a size chip, and the value fills from the real Shopify price (or the 40% formula when the store price is HK$0). The lowest tier is free-shipping only.</div>`;
+  state.tiers.forEach((t,i)=>{
+    out+=`<div class="tier${t.hidden?' hid':''}"><div class="tier-h"><span class="badge">Tier ${i+1}</span>
+      <span style="font-size:13px;color:var(--muted)">HKD$${t.amount}</span>
+      <span class="badge ${t.gifts.filter(g=>!g.hidden).length?'amber':'gray'}">~Total HKD$${tierTotal(t)}</span>
+      <button class="btn-ghost mini" style="margin-left:auto" onclick="toggleTier('${t.id}')">${t.hidden?'🚫 Show':'👁 Hide'}</button>
+      <button class="btn-ghost mini" onclick="dupTier('${t.id}')">⧉ Duplicate</button>
+      ${state.tiers.length>1?`<button class="btn-danger mini" onclick="removeTier('${t.id}')">🗑</button>`:''}</div>`;
+    if(i===0){out+=`<div class="badge green" style="display:inline-block">🚚 Free shipping only — no gifts for this tier</div></div>`;return;}
+    t.gifts.forEach((g,gi)=>{
+      out+=`<div class="gift${g.hidden?' hid':''}"><div class="gift-h"><span class="gt">Gift ${gi+1}</span>
+        ${g.title?'':'<span class="warn">⚠ No product selected</span>'}
+        <button class="btn-ghost mini" onclick="toggleGift('${t.id}','${g.id}')">${g.hidden?'🚫':'👁'}</button>
+        <button class="btn-danger mini" onclick="delGift('${t.id}','${g.id}')">✕</button></div>
+        <div class="prow"><img src="${g.img||PX}" onerror="this.src='${PX}'"><div class="pi"><div class="n">${escH(g.title||'—')}</div><div class="z">${escH(g.titleZh||(g.title?'⚠ no ZH name':''))}</div></div></div>
+        ${(!g.nonMl&&g.sizeOpts&&g.sizeOpts.length)?`<div style="margin-top:7px;display:flex;gap:6px;flex-wrap:wrap;align-items:center"><span class="hint" style="margin:0">Sizes:</span>${g.sizeOpts.map(o=>`<button class="mini ${g.sizeMl===o[0]?'btn-primary':'btn-ghost'}" onclick="setGiftSize('${t.id}','${g.id}',${o[0]})">${o[0]}mL${o[1]>0?' · $'+o[1]:''}</button>`).join('')}</div>`:''}
+        <div class="row" style="margin-top:7px"><div><label class="f" style="margin:2px 0">Size (mL)</label><input type="number" min="1" max="500" value="${g.sizeMl}" oninput="editGiftSize('${t.id}','${g.id}',this.value)" ${g.nonMl?'disabled':''}></div>
+        <div><label class="f" style="margin:2px 0">Value HK$ ${g.nonMl?'':(g.estimated?'<span class="hint" style="margin:0">≈ formula</span>':'<span class="badge green" style="font-size:9px;padding:1px 6px">Shopify</span>')}</label><input type="number" step="5" value="${g.valueHkd||0}" oninput="editGift('${t.id}','${g.id}','valueHkd',+this.value);markManual('${t.id}','${g.id}')"></div></div>
+        <div class="pickwrap"><input type="text" placeholder="🔍 Search products..." oninput="filterPick('${t.id}','${g.id}',this.value)" onfocus="filterPick('${t.id}','${g.id}',this.value)" onblur="setTimeout(()=>closePick('${t.id}-${g.id}'),180)"><div class="picklist" id="pl-${t.id}-${g.id}"></div></div></div>`;
+    });
+    out+=`<button class="btn-ghost mini" style="width:100%;margin-top:4px" onclick="addGift('${t.id}')">+ Add Another Gift</button></div>`;
+  });
+  return out;
+}
+function tierTotal(t){let s=0;t.gifts.filter(g=>!g.hidden).forEach(g=>s+=(+g.valueHkd||0));return s;}
+function addGift(tid){state.tiers.find(x=>x.id===tid).gifts.push({id:uid(),title:"",titleZh:"",sizeMl:5,valueHkd:0,estimated:true,img:null,fullPriceHkd:0,fullSizeMl:0,nonMl:false,sizeOpts:null,hidden:false});renderStep();}
+function delGift(tid,gid){const t=state.tiers.find(x=>x.id===tid);t.gifts=t.gifts.filter(g=>g.id!==gid);renderStep();}
+function toggleGift(tid,gid){gget(tid,gid).hidden=!gget(tid,gid).hidden;renderStep();}
+function toggleTier(id){const t=state.tiers.find(x=>x.id===id);t.hidden=!t.hidden;renderStep();}
+function dupTier(id){const i=state.tiers.findIndex(t=>t.id===id);const c=JSON.parse(JSON.stringify(state.tiers[i]));c.id=uid();
+  let inherited=false;
+  if(!c.gifts.length){for(let j=i-1;j>=0;j--){if(state.tiers[j].gifts.length){c.gifts=JSON.parse(JSON.stringify(state.tiers[j].gifts));inherited=true;break;}}}
+  c.gifts.forEach(g=>g.id=uid());
+  const nx=state.tiers[i+1];c.amount=nx?Math.round((c.amount+nx.amount)/2):c.amount+500;
+  state.tiers.splice(i+1,0,c);renderStep();toast(inherited?'Copied gifts from the tier above':(c.gifts.length?'Tier duplicated with gifts':'Tier duplicated (no gifts to copy)'));}
+function gget(tid,gid){return state.tiers.find(x=>x.id===tid).gifts.find(g=>g.id===gid);}
+function editGift(tid,gid,f,v){gget(tid,gid)[f]=v;}
+function editGiftSize(tid,gid,v){const g=gget(tid,gid);g.sizeMl=+v||0;if(!g.nonMl){const r=giftValueFor(g);g.valueHkd=r.val;g.estimated=r.est;}renderStep();}
+function markManual(tid,gid){gget(tid,gid).estimated=false;}
+function filterPick(tid,gid,q){const pl=document.getElementById('pl-'+tid+'-'+gid);pl.classList.add('open');const ql=(q||'').toLowerCase();const res=GIFTS.filter(p=>!ql||p.t.toLowerCase().includes(ql)||(p.z&&p.z.includes(q))).slice(0,60);pl.innerHTML=res.map(p=>`<div class="pi2" onmousedown="pickProduct('${tid}','${gid}',${GIFTS.indexOf(p)})"><img src="${p.i||PX}" onerror="this.src='${PX}'"><div style="flex:1"><div class="n">${escH(p.t)}</div><div class="m">${escH(p.z||'')} · ${p.n?('HK$'+p.v):(p.s.length?p.s.map(x=>x[0]+'mL').join(' / '):'sample')}</div></div></div>`).join('')||'<div class="pi2 m">No product found.</div>';}
+function closePick(k){const pl=document.getElementById('pl-'+k);if(pl)pl.classList.remove('open');}
+function pickProduct(tid,gid,idx){const p=GIFTS[idx];const g=gget(tid,gid);g.title=p.t;g.titleZh=p.z||"";g.img=p.i;g.nonMl=!!p.n;
+  if(p.n){g.fullPriceHkd=0;g.fullSizeMl=0;g.sizeOpts=null;g.sizeMl=0;g.valueHkd=p.v||0;g.estimated=false;}
+  else{g.sizeOpts=p.s||[];g.sizeMl=(p.s&&p.s.length)?p.s[0][0]:(g.sizeMl||5);const cat=lookupCatalog(p.t);g.fullPriceHkd=cat?cat.p:0;g.fullSizeMl=cat?cat.ml:0;const r=giftValueFor(g);g.valueHkd=r.val;g.estimated=r.est;}
+  renderStep();}
+function setGiftSize(tid,gid,ml){editGiftSize(tid,gid,ml);}
+
+/* ---- STEP 4 ---- */
+function stepValues(){
+  let out=`<div class="step-title">Gift Values</div><div class="step-desc">Auto-calculated using the 40% per-mL premium formula from the travel-size pricing skill (rounded to nearest HK$5). Non-mL items (bags, accessories) require manual override.</div>
+   <button class="btn-ghost" style="width:100%;margin-bottom:10px" onclick="recalcAll()">Recalculate All Gift Values</button>`;
+  state.tiers.forEach((t,i)=>{
+    if(i===0){out+=`<div class="tier"><div class="tier-h"><span class="badge">Tier ${i+1}</span><span class="badge green">🚚 Free shipping only</span></div></div>`;return;}
+    out+=`<div class="tier${t.hidden?' hid':''}"><div class="tier-h"><span class="badge">Tier ${i+1}</span><span style="font-size:13px;color:var(--muted)">HKD$${t.amount}</span><span class="badge amber">Total Worth HKD$${tierTotal(t)}</span></div>`;
+    t.gifts.forEach((g,gi)=>{
+      out+=`<div class="gift${g.hidden?' hid':''}" draggable="true" ondragstart="dStart(event,'${t.id}','${g.id}')" ondragend="dEnd(event)" ondragover="event.preventDefault()" ondrop="dDrop(event,'${t.id}','${g.id}')"><div class="gift-h"><span style="color:var(--muted);cursor:grab">⠿</span><span class="gt">${escH(g.title||'Gift '+(gi+1))}</span><span class="badge">HK$${g.valueHkd||0}</span></div>`;
+      if(g.nonMl){out+=`<div class="hint">Non-mL item — enter value manually below.</div>`;}
+      else{out+=`<div class="grid4"><div class="cell"><div class="k">Full Price</div><div class="v">HK$${g.fullPriceHkd||0}</div></div><div class="cell"><div class="k">Full Size</div><div class="v">${g.fullSizeMl||0}mL</div></div><div class="cell"><div class="k">Gift Size</div><div class="v">${g.sizeMl||0}mL</div></div><div class="cell"><div class="k">Gift Value</div><div class="v">HK$${g.valueHkd||0}</div></div></div>`;}
+      out+=`<label class="f" style="margin:8px 0 3px">Override value (HK$)</label><input type="number" step="5" value="${g.valueHkd||0}" oninput="editGift('${t.id}','${g.id}','valueHkd',+this.value);markManual('${t.id}','${g.id}')"></div>`;
+    });
+    out+=`</div>`;
+  });
+  return out;
+}
+function recalcAll(){state.tiers.forEach(t=>t.gifts.forEach(g=>{if(!g.nonMl){const r=giftValueFor(g);g.valueHkd=r.val;g.estimated=r.est;}}));renderStep();toast('Recalculated');}
+function dStart(e,tid,gid){dragSrc={tid,gid};e.target.classList.add('hid');}
+function dEnd(e){e.target.classList.remove('hid');}
+function dDrop(e,tid,gid){e.preventDefault();if(!dragSrc||dragSrc.tid!==tid)return;const t=state.tiers.find(x=>x.id===tid);const from=t.gifts.findIndex(g=>g.id===dragSrc.gid),to=t.gifts.findIndex(g=>g.id===gid);if(from<0||to<0)return;const[m]=t.gifts.splice(from,1);t.gifts.splice(to,0,m);renderStep();}
+
+/* ---- STEP 5 ---- */
+function stepPreview(){
+  let sum=`<div class="summary"><div style="font-weight:700;color:var(--navy);margin-bottom:6px">${escH(THEMES.find(x=>x.id===state.theme)?.label||state.theme)} theme · ${escH(state.promoName||'Untitled promotion')}</div>`;
+  state.tiers.filter(t=>!t.hidden).forEach((t,i)=>{const gts=t.gifts.filter(g=>!g.hidden);const tv=tierTotal(t);sum+=`<div style="font-size:13px;margin:4px 0"><b>Tier ${i+1}</b> · Spend HKD$${t.amount} · 🚚 Free Shipping${gts.length?` · Get: ${gts.map(g=>escH(g.title)+(g.sizeMl?` (${g.sizeMl}mL)`:'')).join(', ')} · <b>${tv>0?'Total gift value HKD$'+tv:'Free Shipping'}</b>`:''}</div>`;});
+  sum+=`</div>`;
+  return `<div class="step-title">Preview &amp; Customize</div><div class="step-desc">Review the config, fine-tune backgrounds, logo and the seasonal badge, then preview.</div>
+   ${sum}
+   <button class="btn-primary" style="width:100%" onclick="openDialog()">👁 Preview Banner</button>
+   <div class="sep"></div>
+   <label class="f">Custom Background Image (desktop 1920×1080)</label>
+   <div class="drop" onclick="document.getElementById('bgUp').click()">Drag &amp; drop or click to upload</div>
+   <input type="file" id="bgUp" accept="image/*" style="display:none" onchange="upload(event,'customBg')">
+   ${state.customBg?`<div class="thumbrow"><div class="bgthumb desktop"><img src="${state.customBg}"></div><button class="btn-ghost mini" onclick="saveCurBg('desktop')">Save to library</button><button class="btn-danger mini" onclick="state.customBg=null;renderStep()">Remove</button></div>`:''}
+   ${bgLibBlock('desktop')}
+   <label class="f">Mobile Background Image (1080×1920)</label>
+   <div class="drop" onclick="document.getElementById('mbgUp').click()">Portrait background (falls back to desktop if empty)</div>
+   <input type="file" id="mbgUp" accept="image/*" style="display:none" onchange="upload(event,'mobileBg')">
+   ${state.mobileBg?`<div class="thumbrow"><div class="bgthumb mobile"><img src="${state.mobileBg}"></div><button class="btn-ghost mini" onclick="saveCurBg('mobile')">Save to library</button><button class="btn-danger mini" onclick="state.mobileBg=null;renderStep()">Remove</button></div>`:''}
+   ${bgLibBlock('mobile')}
+   <label class="f">Brand Logo</label>
+   <div class="drop" onclick="document.getElementById('logoUp').click()">Upload logo (defaults to the Ms. Chu mark)</div>
+   <input type="file" id="logoUp" accept="image/*" style="display:none" onchange="upload(event,'logo')">
+   ${state.logo?`<div class="thumbrow"><div class="bgthumb desktop"><img src="${state.logo}" style="object-fit:contain;background:#fff"></div><button class="btn-danger mini" onclick="state.logo=null;renderStep()">Remove</button></div>`:''}
+   <label class="f">Seasonal Message Image (top-left, replaces the shield badge)</label>
+   <div class="drop" onclick="document.getElementById('badgeUp').click()">Upload seasonal badge art</div>
+   <input type="file" id="badgeUp" accept="image/*" style="display:none" onchange="upload(event,'seasonalBadge')">
+   ${state.seasonalBadge?`<div class="thumbrow"><div class="bgthumb desktop"><img src="${state.seasonalBadge}" style="object-fit:contain;background:#fff"></div><button class="btn-danger mini" onclick="state.seasonalBadge=null;renderStep()">Remove</button></div>`:''}
+   <div class="sep"></div><label class="f">Promotion Name</label>
+   <input type="text" value="${escA(state.promoName)}" placeholder="e.g., August 2026 GWP" oninput="state.promoName=this.value">`;
+}
+function upload(ev,key){const f=ev.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{state[key]=r.result;renderStep();};r.readAsDataURL(f);ev.target.value='';}
+function saveCurBg(kind){const d=kind==='desktop'?state.customBg:state.mobileBg;if(!d)return;bgLib[kind].push({id:uid(),label:'Saved '+new Date().toLocaleDateString(),data:d});lsSet('mschu_bg_'+kind,bgLib[kind]);renderStep();toast('Saved to library');}
+
+/* ---- STEP 6 ---- */
+function stepGenerate(){
+  return `<div class="step-title">Generate Banners</div><div class="step-desc">Renders banners using real product photos. Exports Desktop (16:9), Mobile (9:16) and Hero — each in English &amp; 繁體中文.</div>
+   <div class="row"><button class="btn-primary" onclick="generateAll()">✨ Generate All Banners</button><button class="btn-ghost" onclick="savePromo()">💾 Save Promotion</button></div>
+   <div class="hint" style="margin-top:8px">Desktop PNG 3840×2160 · Mobile PNG 2160×3840 · Hero JPG 1280×1089. Click any result to open it full-size.</div>
+   <div id="genGallery"></div>`;
+}
+
+/* =================== BANNER ENGINE =================== */
+function themeBadgeLabel(){const t=THEMES.find(x=>x.id===state.theme);return(t?t.label:state.theme||"PROMO").toUpperCase();}
+function themeBadgeColor(){const t=THEMES.find(x=>x.id===state.theme);return t?t.badge:"#D4AF37";}
+function visibleTiers(){return state.tiers.filter(t=>!t.hidden);}
+function giftTotal(t){return t.gifts.filter(g=>!g.hidden).reduce((s,g)=>s+(+g.valueHkd||0),0);}
+function filledGifts(t){return t.gifts.filter(g=>!g.hidden&&(g.img||g.title));}
+function botanical(){return`<div style="position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse at top left,rgba(46,139,87,.08) 0%,transparent 30%),radial-gradient(ellipse at top right,rgba(212,175,55,.08) 0%,transparent 30%),radial-gradient(ellipse at bottom left,rgba(46,139,87,.06) 0%,transparent 25%),radial-gradient(ellipse at bottom right,rgba(212,175,55,.06) 0%,transparent 25%)"></div>`;}
+function logoUrl(){return state.logo||LOGO;}
+function badgeOrSeasonal(top,left,w,pad,fs){if(state.seasonalBadge)return`<div style="position:absolute;top:${top}px;left:${left}px"><img src="${state.seasonalBadge}" crossorigin="anonymous" style="width:${w}px;height:auto;object-fit:contain;mix-blend-mode:multiply;filter:contrast(1.1)"></div>`;return`<div style="position:absolute;top:${top+(fs===18?10:13)}px;left:${left}px;background:${themeBadgeColor()};color:#fff;padding:${pad};font-weight:bold;font-size:${fs}px;font-family:sans-serif;clip-path:polygon(0 0,100% 0,100% 75%,50% 100%,0 75%);text-align:center;line-height:1.2">${escH(themeBadgeLabel())}</div>`;}
+function imgTag(url,styl){if(!url)return'';const blend=url.startsWith('data:image')?'normal':'multiply';return`<img src="${url}" crossorigin="anonymous" style="${styl};mix-blend-mode:${blend}" onerror="this.style.visibility='hidden'">`;}
+function buildBanner(f,l){
+  const isZh=l==='zh',bg=(f==='mobile'&&state.mobileBg)?state.mobileBg:state.customBg,cream="linear-gradient(135deg,#FDF8F0 0%,#FAF3E8 50%,#FDF8F0 100%)",tiers=visibleTiers();
+  const el=document.createElement('div');const W=f==='hero'?1280:f==='mobile'?1080:1920,H=f==='hero'?1089:f==='mobile'?1920:1080;
+  el.style.cssText=`width:${W}px;height:${H}px;position:relative;overflow:hidden;display:flex;flex-direction:column;${f==='hero'?'align-items:center;':''}font-family:${isZh?'"Noto Sans TC","Microsoft JhengHei",sans-serif':'"Georgia","Playfair Display",serif'};background:${bg?`url('${bg}') center/cover no-repeat`:cream}`;
+  if(f==='hero'){
+    el.innerHTML=(bg?'':botanical())
+     +`<div style="position:absolute;top:20px;right:30px;width:100px;height:100px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,.1);z-index:10"><img src="${logoUrl()}" crossorigin="anonymous" style="width:90px;height:90px;object-fit:contain;border-radius:50%"></div>`
+     +`<div style="margin-top:30px;background:#fff;padding:14px 60px;border-radius:4px;box-shadow:0 4px 12px rgba(0,0,0,.15);z-index:5"><h1 style="font-size:48px;font-weight:bold;color:#1B365D;margin:0;font-family:'Georgia',serif;letter-spacing:2px">${STR.spendOver[l]}</h1></div>`
+     +`<div style="display:flex;justify-content:center;gap:20px;margin-top:30px;z-index:5;flex-wrap:wrap">${tiers.map(t=>`<div style="background:linear-gradient(135deg,#C41E3A 0%,#8B0000 100%);color:#fff;padding:10px 24px;border-radius:6px;font-size:32px;font-weight:bold;font-family:sans-serif;box-shadow:0 3px 8px rgba(0,0,0,.2);min-width:120px;text-align:center">$${t.amount.toLocaleString()}</div>`).join('')}</div>`
+     +`<div style="display:flex;justify-content:center;align-items:flex-end;gap:4px;margin-top:10px;flex:1;padding:0 20px;z-index:5">${tiers.map(t=>{const fg=t.gifts.filter(g=>!g.hidden&&g.img);const cw=Math.floor((1280-80)/tiers.length);return`<div style="display:flex;align-items:flex-end;justify-content:center;gap:2px;flex:1;max-width:${cw}px">${fg.length?fg.map(g=>imgTag(g.img,'height:160px;width:auto;max-width:120px;object-fit:contain')).join(''):`<div style="display:flex;flex-direction:column;align-items:center"><div style="font-size:64px;line-height:1">🚚</div><div style="font-size:20px;font-weight:bold;color:#2E8B57;font-family:sans-serif">${STR.ship[l]}</div></div>`}</div>`;}).join('')}</div>`
+     +`<div style="display:flex;justify-content:center;gap:16px;padding:0 40px;margin-top:8px;width:100%;z-index:5">${tiers.map(t=>{const tv=giftTotal(t);const cw=Math.floor((1280-80)/tiers.length);return`<div style="flex:1;max-width:${cw}px;text-align:center;font-size:26px;font-weight:bold;color:#1B365D;font-family:sans-serif">${tv>0?('$'+tv.toLocaleString()+' '+STR.valueH[l]):STR.ship[l]}</div>`;}).join('')}</div>`
+     +`<div style="margin-top:20px;margin-bottom:30px;background:#fff;padding:14px 60px;border-radius:4px;box-shadow:0 4px 12px rgba(0,0,0,.15);z-index:5"><p style="font-size:36px;font-weight:bold;color:#C41E3A;margin:0;font-style:italic;font-family:${isZh?'"Noto Sans TC",sans-serif':'"Georgia",serif'}">${STR.cta[l]}</p></div>`;
+    return{el,W,H};
+  }
+  let header=`<div style="${f==='mobile'?'':'height:220px;'}display:flex;flex-direction:column;align-items:center;justify-content:center;padding:${f==='mobile'?'40px 30px 24px':'30px 60px 20px'};position:relative;flex-shrink:0">`
+    +badgeOrSeasonal(f==='mobile'?28:25,f==='mobile'?28:40,f==='mobile'?150:160,f==='mobile'?'10px 14px':'10px 18px',f==='mobile'?20:18)
+    +`<div style="position:absolute;top:${f==='mobile'?20:18}px;right:${f==='mobile'?24:35}px;width:${f==='mobile'?140:160}px;height:${f==='mobile'?140:160}px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,.1)"><img src="${logoUrl()}" crossorigin="anonymous" style="width:${f==='mobile'?130:148}px;height:${f==='mobile'?130:148}px;object-fit:contain;border-radius:50%"></div>`
+    +`<div style="font-size:${f==='mobile'?50:52}px;font-weight:bold;color:#1B365D;margin:${f==='mobile'?'60px 0 8px 0':'0 0 8px 0'};text-align:center;letter-spacing:-.5px">${STR.header[l]}</div>`
+    +`<p style="font-size:${f==='mobile'?22:24}px;color:#666;font-style:italic;margin:0;text-align:center">${STR.sub[l]}</p></div>`;
+  let body='';
+  if(f!=='mobile'){
+    body=`<div style="flex:1;display:flex;flex-direction:column;padding:0 50px">`+tiers.map(t=>{const fg=filledGifts(t),tv=giftTotal(t);const prod=fg.map(g=>`<div style="display:flex;align-items:center;gap:10px"><div style="font-size:26px;font-weight:bold;color:#1B365D;font-family:sans-serif;flex-shrink:0">+</div>${imgTag(g.img,'width:130px;height:130px;object-fit:contain;flex-shrink:0')}<div style="font-size:14px;color:#333;font-family:sans-serif;line-height:1.3;max-width:140px;font-weight:500">${escH(isZh?(g.titleZh||g.title):g.title)}${g.sizeMl?` ${g.sizeMl}mL`:''}</div></div>`).join('');
+      return`<div style="flex:1;display:flex;align-items:center;border-top:1px solid rgba(212,175,55,.3);padding:8px 0"><div style="width:220px;flex-shrink:0;padding-right:20px;border-right:2px solid rgba(212,175,55,.4)"><div style="font-size:44px;font-weight:bold;color:#1B365D;font-family:sans-serif;line-height:1.1">HKD ${t.amount.toLocaleString()}</div><div style="font-size:18px;color:#1B365D;font-family:sans-serif;font-weight:500;margin-top:2px">${STR.inOrder[l]}</div></div><div style="width:110px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding-left:14px"><div style="font-size:42px;line-height:1">🚚</div><div style="font-size:15px;color:#2E8B57;font-weight:bold;font-family:sans-serif;line-height:1.2;text-align:center;margin-top:2px">${STR.ship[l]}</div></div><div style="flex:1;display:flex;align-items:center;gap:12px;padding-left:16px;overflow:hidden">${prod}</div><div style="width:220px;flex-shrink:0;text-align:right;padding-left:10px">${tv>0?`<div style="font-size:20px;color:#1B365D;font-family:sans-serif;font-weight:500;line-height:1.2">${STR.valueD[l]}</div><div style="font-size:36px;font-weight:bold;color:#1B365D;font-family:sans-serif;line-height:1.1">HKD ${tv.toLocaleString()}</div>`:`<div style="font-size:32px;color:#2E8B57;font-family:sans-serif;font-weight:bold">✓</div>`}</div></div>`;}).join('')+`</div>`;
+  }else{
+    body=`<div style="flex:1;display:flex;flex-direction:column;padding:0 24px;justify-content:space-evenly">`+tiers.map((t,idx)=>{const fg=filledGifts(t),tv=giftTotal(t),gc=fg.length,imgSize=gc<=2?120:gc<=4?100:80,nameF=gc<=3?16:14;const cells=fg.map(g=>`<div style="display:flex;flex-direction:column;align-items:center">${imgTag(g.img,`width:${imgSize}px;height:${imgSize}px;object-fit:contain;flex-shrink:0`)}<div style="font-size:${nameF}px;color:#333;font-family:sans-serif;line-height:1.2;text-align:center;margin-top:4px;max-width:${imgSize+20}px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical">${escH(isZh?(g.titleZh||g.title):g.title)}${g.sizeMl?` ${g.sizeMl}mL`:''}</div></div>`).join('');
+      return`<div style="display:flex;align-items:center;padding:20px 0;gap:12px;position:relative;${idx<tiers.length-1?'border-bottom:1.5px solid rgba(200,200,200,.5)':''}"><div style="flex-shrink:0;min-width:110px"><div style="font-size:18px;color:#1B365D;font-family:sans-serif;font-weight:500;line-height:1.3">HKD</div><div style="font-size:52px;font-weight:bold;color:#1B365D;font-family:sans-serif;line-height:1">${t.amount.toLocaleString()}</div><div style="font-size:16px;color:#1B365D;font-family:sans-serif;margin-top:2px">${STR.inOrder[l]}</div></div><div style="display:flex;flex-direction:column;align-items:center;flex-shrink:0;min-width:80px"><div style="font-size:36px;line-height:1">🚚</div><div style="font-size:14px;color:#2E8B57;font-weight:bold;font-family:sans-serif;margin-top:4px;text-align:center">${STR.ship[l]}</div></div>${gc>0?`<div style="font-size:28px;font-weight:bold;color:#1B365D;font-family:sans-serif;flex-shrink:0">+</div>`:''}<div style="flex:1;display:grid;grid-template-columns:${gc<=1?'1fr':'repeat(2,1fr)'};gap:8px;align-content:center;justify-items:center">${cells}</div><div style="flex-shrink:0;text-align:right;min-width:110px">${tv>0?`<div style="font-size:18px;color:#1B365D;font-family:sans-serif;font-weight:500;line-height:1.2">${STR.valueM[l]}</div><div style="font-size:32px;font-weight:bold;color:#1B365D;font-family:sans-serif;line-height:1.1">HKD ${tv.toLocaleString()}</div>`:`<div style="font-size:22px;font-weight:bold;color:#2E8B57;font-family:sans-serif">= ${STR.ship[l]}</div>`}</div></div>`;}).join('')+`</div>`;
+  }
+  const foot=`<div style="height:${f==='mobile'?70:80}px;background:#1B365D;display:flex;align-items:center;justify-content:center;padding:0 ${f==='mobile'?30:40}px;flex-shrink:0;${f==='mobile'?'margin-top:8px':''}"><p style="color:#fff;font-size:${f==='mobile'?13:14}px;text-align:center;margin:0;font-family:sans-serif;line-height:1.4">${STR.disc[l]}</p></div>`;
+  el.innerHTML=(bg?'':botanical())+`<div style="position:absolute;top:12px;left:12px;right:12px;bottom:12px;border:2px solid rgba(212,175,55,.4);border-radius:4px;pointer-events:none"></div>`+header+body+foot;
+  return{el,W,H};
+}
+
+/* =================== PREVIEW DIALOG =================== */
+function openDialog(){document.getElementById('overlay').classList.add('open');dRender();}
+function closeDialog(){document.getElementById('overlay').classList.remove('open');}
+function dSetFmt(f){dFmt=f;document.querySelectorAll('#dFmt button').forEach(b=>b.classList.toggle('on',b.dataset.f===f));dRender();}
+function dSetLang(l){dLang=l;document.querySelectorAll('#dLang button').forEach(b=>b.classList.toggle('on',b.dataset.l===l));dRender();}
+function dRender(){const host=document.getElementById('dHost');host.innerHTML='';const{el,W,H}=buildBanner(dFmt,dLang);host.appendChild(el);const availW=Math.min(window.innerWidth*0.9,1200),availH=window.innerHeight*0.75;const scale=Math.min(1,availW/W,availH/H);const sc=document.getElementById('dScaler');sc.style.transform=`scale(${scale})`;sc.style.width=W+'px';sc.style.height=(H*scale)+'px';}
+async function dExport(){toast('Rendering '+dFmt+'…');try{const{url,ext}=await rasterize(dFmt,dLang);dl(url,`promotion-${dFmt}-${dLang}.${ext}`);toast('Downloaded');}catch(e){toast('Export blocked by a cross-origin image');}}
+
+/* =================== EXPORT =================== */
+async function rasterize(f,l){const{el,W,H}=buildBanner(f,l);const holder=document.createElement('div');holder.style.cssText='position:fixed;left:0;top:0;opacity:0;pointer-events:none;z-index:-1';holder.appendChild(el);document.body.appendChild(holder);await new Promise(r=>setTimeout(r,350));const pr=f==='hero'?1:2;const opt={pixelRatio:pr,cacheBust:true,quality:f==='hero'?0.82:0.95,width:W,height:H,style:{transform:'none'}};let url;try{url=f==='hero'?await htmlToImage.toJpeg(el,opt):await htmlToImage.toPng(el,opt);}catch(e){document.body.removeChild(holder);throw e;}document.body.removeChild(holder);return{url,ext:f==='hero'?'jpg':'png'};}
+function dl(url,name){const a=document.createElement('a');a.href=url;a.download=name;a.click();}
+async function generateAll(){
+  const g=document.getElementById('genGallery');g.innerHTML='<div class="hint" style="margin-top:14px">Rendering 6 variants…</div>';
+  const combos=[['desktop','en'],['desktop','zh'],['mobile','en'],['mobile','zh'],['hero','en'],['hero','zh']];
+  const gal=document.createElement('div');gal.className='gallery';let ok=0;
+  for(const[f,l] of combos){try{const{url,ext}=await rasterize(f,l);const c=document.createElement('div');c.className='gcard';c.innerHTML=`<img src="${url}" onclick="window.open('${url}')"><div class="cap"><span class="t">${f} · ${l.toUpperCase()}</span><button class="btn-ghost mini" onclick="dl('${url}','promotion-${f}-${l}.${ext}')">⬇︎</button></div>`;gal.appendChild(c);ok++;}catch(e){console.error(f,l,e);}}
+  g.innerHTML='';g.appendChild(gal);
+  const note=document.createElement('div');note.className='hint';note.style.marginTop='10px';note.textContent=ok===6?'All 6 rendered. Click a thumbnail to open full-size, or ⬇︎ to download.':`Rendered ${ok}/6 (some blocked by cross-origin images — in your browser Shopify images load normally).`;g.appendChild(note);
+}
+
+/* =================== SAVED PROMOTIONS =================== */
+function savePromo(){const name=state.promoName||('Promotion '+new Date().toLocaleDateString());const rec={id:uid(),name,theme:state.theme,date:new Date().toLocaleDateString(),state:JSON.parse(JSON.stringify(state))};savedPromos.unshift(rec);savedPromos=savedPromos.slice(0,12);lsSet('mschu_promos',savedPromos);toast('Promotion saved');}
+function loadPromo(id){const r=savedPromos.find(p=>p.id===id);if(!r)return;state=JSON.parse(JSON.stringify(r.state));renderStep();toast('Promotion loaded');}
+function delPromo(id){savedPromos=savedPromos.filter(p=>p.id!==id);lsSet('mschu_promos',savedPromos);renderStep();}
+
+/* =================== JSON IMPORT/EXPORT =================== */
+function saveJSON(){const d=JSON.stringify(state,null,2);dl('data:application/json;charset=utf-8,'+encodeURIComponent(d),(state.promoName||'promotion').replace(/[^\w一-龥-]+/g,'_')+'.json');toast('Exported JSON');}
+function loadJSON(ev){const f=ev.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{state=JSON.parse(r.result);renderStep();toast('Imported');}catch(e){toast('Invalid file');}};r.readAsText(f);ev.target.value='';}
+
+/* =================== HELPERS =================== */
+function escH(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function escA(s){return(s||'').replace(/"/g,'&quot;');}
+let tT;function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');clearTimeout(tT);tT=setTimeout(()=>t.classList.remove('show'),2600);}
+window.addEventListener('resize',()=>{if(document.getElementById('overlay').classList.contains('open'))dRender();});
+
+/* =================== BOOT =================== */
+buildStepper();renderStep();
+</script>
+</body>
+</html>
