@@ -398,7 +398,7 @@ function stepGifts(){
       ${state.tiers.length>1?`<button class="btn-danger mini" onclick="removeTier('${t.id}')">🗑</button>`:''}</div>`;
     if(i===0){out+=`<div class="badge green" style="display:inline-block">🚚 Free shipping only — no gifts for this tier</div></div>`;return;}
     t.gifts.forEach((g,gi)=>{
-      out+=`<div class="gift${g.hidden?' hid':''}"><div class="gift-h"><span class="gt">Gift ${gi+1}</span>
+      out+=`<div class="gift${g.hidden?' hid':''}" draggable="true" ondragstart="dStart(event,'${t.id}','${g.id}')" ondragend="dEnd(event)" ondragover="event.preventDefault()" ondrop="dDrop(event,'${t.id}','${g.id}')"><div class="gift-h"><span style="color:var(--muted);cursor:grab" title="Drag to reorder">⠿</span><span class="gt">Gift ${gi+1}</span>
         ${g.title?'':'<span class="warn">⚠ No product selected</span>'}
         <button class="btn-ghost mini" onclick="toggleGift('${t.id}','${g.id}')">${g.hidden?'🚫':'👁'}</button>
         <button class="btn-danger mini" onclick="delGift('${t.id}','${g.id}')">✕</button></div>
@@ -453,8 +453,8 @@ function stepValues(){
   return out;
 }
 function recalcAll(){state.tiers.forEach(t=>t.gifts.forEach(g=>{if(!g.nonMl){const r=giftValueFor(g);g.valueHkd=r.val;g.estimated=r.est;}}));renderStep();toast('Recalculated');}
-function dStart(e,tid,gid){dragSrc={tid,gid};e.target.classList.add('hid');}
-function dEnd(e){e.target.classList.remove('hid');}
+function dStart(e,tid,gid){if(e.target.closest&&e.target.closest('input,select,textarea,button')){e.preventDefault();return;}dragSrc={tid,gid};try{e.dataTransfer.effectAllowed='move';}catch(_){}e.currentTarget.classList.add('hid');}
+function dEnd(e){e.currentTarget.classList.remove('hid');dragSrc=null;}
 function dDrop(e,tid,gid){e.preventDefault();if(!dragSrc||dragSrc.tid!==tid)return;const t=state.tiers.find(x=>x.id===tid);const from=t.gifts.findIndex(g=>g.id===dragSrc.gid),to=t.gifts.findIndex(g=>g.id===gid);if(from<0||to<0)return;const[m]=t.gifts.splice(from,1);t.gifts.splice(to,0,m);renderStep();}
 
 /* ---- STEP 5 ---- */
