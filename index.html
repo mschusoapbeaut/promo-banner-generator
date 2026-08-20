@@ -389,6 +389,8 @@ function stepTiers(){
    ${rows}<button class="btn-ghost" style="width:100%;margin-top:6px" onclick="addTier()">+ Add Tier</button>`;
 }
 function addTier(){const last=state.tiers[state.tiers.length-1];state.tiers.push({id:uid(),amount:(last?last.amount:0)+500,gifts:[],hidden:false});renderStep();}
+/* Edit a tier's spend threshold from any step; no re-render so the field keeps focus. */
+function setTierAmount(id,v){const t=state.tiers.find(x=>x.id===id);if(t)t.amount=+v||0;}
 function removeTier(id){if(state.tiers.length<=1){toast('At least one tier is required');return;}state.tiers=state.tiers.filter(t=>t.id!==id);renderStep();}
 
 /* ---- STEP 3 ---- */
@@ -396,7 +398,7 @@ function stepGifts(){
   let out=`<div class="step-title">Select Gift Products</div><div class="step-desc">Search your synced Shopify gift catalog (74 products). Pick a product, tap a size chip, and the value fills from the real Shopify price (or the 40% formula when the store price is HK$0). The lowest tier is free-shipping only.</div>`;
   state.tiers.forEach((t,i)=>{
     out+=`<div class="tier${t.hidden?' hid':''}"><div class="tier-h"><span class="badge">Tier ${i+1}</span>
-      <span style="font-size:13px;color:var(--muted)">HKD$${t.amount}</span>
+      <span style="font-size:13px;color:var(--muted)">Spend HKD$</span><input type="number" style="max-width:110px" min="0" step="100" value="${t.amount}" oninput="setTierAmount('${t.id}',this.value)" title="Edit the spend threshold for this tier">
       <span class="badge ${t.gifts.filter(g=>!g.hidden).length?'amber':'gray'}">~Total HKD$${tierTotal(t)}</span>
       <button class="btn-ghost mini" style="margin-left:auto" onclick="toggleTier('${t.id}')">${t.hidden?'🚫 Show':'👁 Hide'}</button>
       <button class="btn-ghost mini" onclick="dupTier('${t.id}')">⧉ Duplicate</button>
@@ -446,7 +448,7 @@ function stepValues(){
    <button class="btn-ghost" style="width:100%;margin-bottom:10px" onclick="recalcAll()">Recalculate All Gift Values</button>`;
   state.tiers.forEach((t,i)=>{
     if(i===0){out+=`<div class="tier"><div class="tier-h"><span class="badge">Tier ${i+1}</span><span class="badge green">🚚 Free shipping only</span></div></div>`;return;}
-    out+=`<div class="tier${t.hidden?' hid':''}"><div class="tier-h"><span class="badge">Tier ${i+1}</span><span style="font-size:13px;color:var(--muted)">HKD$${t.amount}</span><span class="badge amber">Total Worth HKD$${tierTotal(t)}</span></div>`;
+    out+=`<div class="tier${t.hidden?' hid':''}"><div class="tier-h"><span class="badge">Tier ${i+1}</span><span style="font-size:13px;color:var(--muted)">Spend HKD$</span><input type="number" style="max-width:110px" min="0" step="100" value="${t.amount}" oninput="setTierAmount('${t.id}',this.value)" title="Edit the spend threshold for this tier"><span class="badge amber">Total Worth HKD$${tierTotal(t)}</span></div>`;
     t.gifts.forEach((g,gi)=>{
       out+=`<div class="gift${g.hidden?' hid':''}" draggable="true" ondragstart="dStart(event,'${t.id}','${g.id}')" ondragend="dEnd(event)" ondragover="event.preventDefault()" ondrop="dDrop(event,'${t.id}','${g.id}')"><div class="gift-h"><span style="color:var(--muted);cursor:grab">⠿</span><span class="gt">${escH(g.title||'Gift '+(gi+1))}</span><span class="badge">HK$${g.valueHkd||0}</span></div>`;
       if(g.nonMl){out+=`<div class="hint">Non-mL item — enter value manually below.</div>`;}
