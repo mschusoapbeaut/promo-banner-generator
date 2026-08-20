@@ -118,7 +118,7 @@
   </div>
 </div>
 <script>
-  const GATE_PASSWORD = "MsChu2026";   /* <-- change this to set your team password */
+  const GATE_PASSWORD = "9999";   /* <-- change this to set your team password */
   function gateOpen(){ const g=document.getElementById('gate'); if(g){g.style.display='none';} try{sessionStorage.setItem('mschu_gate','1');}catch(e){} }
   function gateCheck(){ const v=document.getElementById('gatePw').value; if(v===GATE_PASSWORD){gateOpen();} else {document.getElementById('gateErr').textContent='Incorrect password';document.getElementById('gatePw').value='';} }
   try{ if(sessionStorage.getItem('mschu_gate')==='1'){ var g=document.getElementById('gate'); if(g)g.style.display='none'; } }catch(e){}
