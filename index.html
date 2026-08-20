@@ -398,25 +398,22 @@ function removeTier(id){if(state.tiers.length<=1){toast('At least one tier is re
 function stepGifts(){
   let out=`<div class="step-title">Select Gift Products</div><div class="step-desc">Search your synced Shopify gift catalog (74 products). Pick a product, tap a size chip, and the value fills from the real Shopify price (or the 40% formula when the store price is HK$0). The lowest tier is free-shipping only.</div>`;
   state.tiers.forEach((t,i)=>{
-    out+=`<div class="tier${t.hidden?' hid':''}"><div class="tier-h"><span class="badge">Tier ${i+1}</span>
-      <span style="font-size:13px;color:var(--muted)">Spend HKD$</span><input type="number" style="max-width:110px" min="0" step="100" value="${t.amount}" oninput="setTierAmount('${t.id}',this.value)" title="Edit the spend threshold for this tier">
-      <span class="badge ${t.gifts.filter(g=>!g.hidden).length?'amber':'gray'}">~Total HKD$${tierTotal(t)}</span>
-      <button class="btn-ghost mini" style="margin-left:auto" onclick="toggleTier('${t.id}')">${t.hidden?'🚫 Show':'👁 Hide'}</button>
-      <button class="btn-ghost mini" onclick="dupTier('${t.id}')">⧉ Duplicate</button>
-      ${state.tiers.length>1?`<button class="btn-danger mini" onclick="removeTier('${t.id}')">🗑</button>`:''}</div>`;
-    if(i===0){out+=`<div class="badge green" style="display:inline-block">🚚 Free shipping only — no gifts for this tier</div></div>`;return;}
+    const gcount=t.gifts.filter(g=>!g.hidden).length;
+    out+=`<div class="tier${t.hidden?' hid':''}" style="padding:16px 16px 18px;margin-bottom:16px">
+      <div class="tier-h" style="margin-bottom:0"><span class="badge">Tier ${i+1}</span><span style="font-size:14px;font-weight:600;color:var(--ink)">HKD$</span><input type="number" style="max-width:110px;font-weight:600" min="0" step="100" value="${t.amount}" oninput="setTierAmount('${t.id}',this.value)" title="Edit the spend threshold for this tier"><span class="badge ${gcount?'amber':'gray'}" style="font-size:12px">~Total HKD$${tierTotal(t)}</span>
+      <span style="margin-left:auto;display:flex;gap:6px"><button class="btn-ghost mini" onclick="toggleTier('${t.id}')">${t.hidden?'🚫 Show':'👁 Hide'}</button><button class="btn-ghost mini" onclick="dupTier('${t.id}')">⧉ Duplicate</button>${state.tiers.length>1?`<button class="btn-danger mini" onclick="removeTier('${t.id}')">🗑</button>`:''}</span></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;background:#e9f6ee;border:1px solid #cfe9d8;border-radius:10px;padding:10px 13px;margin:12px 0"><span style="font-weight:700;color:#2E8B57;font-size:13px">🚚 Free Shipping</span><span style="font-size:12px;color:#3b8a5c">Included in all tiers</span></div>`;
+    if(i===0){out+=`<div class="hint" style="font-style:italic;margin:2px 2px 0">Free Shipping only — no product gifts for this tier</div></div>`;return;}
     t.gifts.forEach((g,gi)=>{
-      out+=`<div class="gift${g.hidden?' hid':''}" draggable="true" ondragstart="dStart(event,'${t.id}','${g.id}')" ondragend="dEnd(event)" ondragover="event.preventDefault()" ondrop="dDrop(event,'${t.id}','${g.id}')"><div class="gift-h"><span style="color:var(--muted);cursor:grab" title="Drag to reorder">⠿</span><span class="gt">Gift ${gi+1}</span>
-        ${g.title?'':'<span class="warn">⚠ No product selected</span>'}
-        <button class="btn-ghost mini" onclick="toggleGift('${t.id}','${g.id}')">${g.hidden?'🚫':'👁'}</button>
-        <button class="btn-danger mini" onclick="delGift('${t.id}','${g.id}')">✕</button></div>
+      out+=`<div class="gift${g.hidden?' hid':''}" draggable="true" ondragstart="dStart(event,'${t.id}','${g.id}')" ondragend="dEnd(event)" ondragover="event.preventDefault()" ondrop="dDrop(event,'${t.id}','${g.id}')" style="background:#fff;padding:14px 15px;margin:12px 0">
+        <div style="display:flex;align-items:center;gap:9px;margin-bottom:11px"><span style="color:var(--muted);cursor:grab;font-size:16px" title="Drag to reorder">⠿</span><span style="font-size:13px;font-weight:700;color:var(--navy)">Gift ${gi+1}</span>${g.title?'':'<span class="warn" style="font-size:12px">⚠ No product selected</span>'}<span style="margin-left:auto;display:flex;gap:6px"><button class="btn-ghost mini" onclick="toggleGift('${t.id}','${g.id}')">${g.hidden?'🚫':'👁'}</button><button class="btn-danger mini" onclick="delGift('${t.id}','${g.id}')">✕</button></span></div>
         <div class="prow"><img src="${g.img||PX}" onerror="this.src='${PX}'"><div class="pi"><div class="n">${escH(g.title||'—')}</div><div class="z">${escH(g.titleZh||(g.title?'⚠ no ZH name':''))}</div></div></div>
-        ${(!g.nonMl&&g.sizeOpts&&g.sizeOpts.length)?`<div style="margin-top:7px;display:flex;gap:6px;flex-wrap:wrap;align-items:center"><span class="hint" style="margin:0">Sizes:</span>${g.sizeOpts.map(o=>`<button class="mini ${g.sizeMl===o[0]?'btn-primary':'btn-ghost'}" onclick="setGiftSize('${t.id}','${g.id}',${o[0]})">${o[0]}mL${o[1]>0?' · $'+o[1]:''}</button>`).join('')}</div>`:''}
-        <div class="row" style="margin-top:7px"><div><label class="f" style="margin:2px 0">Size (mL)</label><input type="number" min="1" max="500" value="${g.sizeMl}" oninput="editGiftSize('${t.id}','${g.id}',this.value)" ${g.nonMl?'disabled':''}></div>
+        ${(!g.nonMl&&g.sizeOpts&&g.sizeOpts.length)?`<div style="margin-top:11px;display:flex;gap:6px;flex-wrap:wrap;align-items:center"><span class="hint" style="margin:0">Sizes:</span>${g.sizeOpts.map(o=>`<button class="mini ${g.sizeMl===o[0]?'btn-primary':'btn-ghost'}" onclick="setGiftSize('${t.id}','${g.id}',${o[0]})">${o[0]}mL${o[1]>0?' · $'+o[1]:''}</button>`).join('')}</div>`:''}
+        <div class="row" style="margin-top:11px"><div><label class="f" style="margin:2px 0">Size (mL)</label><input type="number" min="1" max="500" value="${g.sizeMl}" oninput="editGiftSize('${t.id}','${g.id}',this.value)" ${g.nonMl?'disabled':''}></div>
         <div><label class="f" style="margin:2px 0">Value HK$ ${g.nonMl?'':(g.estimated?'<span class="hint" style="margin:0">≈ formula</span>':'<span class="badge green" style="font-size:9px;padding:1px 6px">Shopify</span>')}</label><input type="number" step="5" value="${g.valueHkd||0}" oninput="editGift('${t.id}','${g.id}','valueHkd',+this.value);markManual('${t.id}','${g.id}')"></div></div>
         <div class="pickwrap"><input type="text" placeholder="🔍 Search products..." oninput="filterPick('${t.id}','${g.id}',this.value)" onfocus="filterPick('${t.id}','${g.id}',this.value)" onblur="setTimeout(()=>closePick('${t.id}-${g.id}'),180)"><div class="picklist" id="pl-${t.id}-${g.id}"></div></div></div>`;
     });
-    out+=`<button class="btn-ghost mini" style="width:100%;margin-top:4px" onclick="addGift('${t.id}')">+ Add Another Gift</button></div>`;
+    out+=`<button class="btn-ghost mini" style="width:100%;margin-top:6px;padding:11px" onclick="addGift('${t.id}')">+ Add Another Gift</button></div>`;
   });
   return out;
 }
