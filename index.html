@@ -298,7 +298,7 @@ function uid(){return 'g'+Math.random().toString(36).slice(2,8)}
 function newGift(match,ml){
   const p=GIFTS.find(x=>x.n===0 && x.t.toLowerCase().includes(match.toLowerCase()))||null;
   const cat=CATALOG_PRICING[match]||lookupCatalog(match)||{ml:0,p:0};
-  const g={id:uid(),title:p?p.t:(match||""),titleZh:p?p.z:"",sizeMl:ml||5,valueHkd:0,estimated:true,img:p?p.i:null,fullPriceHkd:cat.p||0,fullSizeMl:cat.ml||0,nonMl:false,sizeOpts:p?p.s:null,sku:'',variantId:'',hidden:false};
+  const g={id:uid(),title:p?p.t:(match||""),titleZh:p?p.z:"",sizeMl:ml||5,valueHkd:0,estimated:true,img:p?p.i:null,fullPriceHkd:cat.p||0,fullSizeMl:cat.ml||0,nonMl:false,sizeOpts:p?p.s:null,sku:'',variantId:'',customImg:null,hidden:false};
   const r=giftValueFor(g);g.valueHkd=r.val;g.estimated=r.est;syncGiftSku(g);return g;
 }
 /* Set a gift's sku + variantId from the selected size (or the non-mL product). */
@@ -374,7 +374,7 @@ function bgLibBlock(kind){
    <button class="btn-ghost mini" style="margin-top:8px" onclick="document.getElementById('bglib-${kind}').click()">+ Upload to library</button>
    <input type="file" id="bglib-${kind}" accept="image/*" style="display:none" onchange="uploadBgLib(event,'${kind}')">`;
 }
-function uploadBgLib(ev,kind){const f=ev.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{bgLib[kind].push({id:uid(),label:f.name,data:r.result});lsSet('mschu_bg_'+kind,bgLib[kind]);renderStep();toast('Saved to library');};r.readAsDataURL(f);ev.target.value='';}
+function uploadBgLib(ev,kind){const f=ev.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{const it={id:uid(),label:f.name,data:r.result};bgLib[kind].push(it);lsSet('mschu_bg_'+kind,bgLib[kind]);if(kind==='desktop')state.customBg=it.data;else state.mobileBg=it.data;renderStep();toast('Saved to library & applied');};r.readAsDataURL(f);ev.target.value='';}
 function applyBg(kind,id){const b=bgLib[kind].find(x=>x.id===id);if(!b)return;if(kind==='desktop')state.customBg=b.data;else state.mobileBg=b.data;renderStep();toast('Background applied');}
 function delBg(kind,id){bgLib[kind]=bgLib[kind].filter(x=>x.id!==id);lsSet('mschu_bg_'+kind,bgLib[kind]);renderStep();}
 
@@ -420,7 +420,7 @@ function stepGifts(){
   return out;
 }
 function tierTotal(t){let s=0;t.gifts.filter(g=>!g.hidden).forEach(g=>s+=(+g.valueHkd||0));return s;}
-function addGift(tid){state.tiers.find(x=>x.id===tid).gifts.push({id:uid(),title:"",titleZh:"",sizeMl:5,valueHkd:0,estimated:true,img:null,fullPriceHkd:0,fullSizeMl:0,nonMl:false,sizeOpts:null,sku:'',variantId:'',hidden:false});renderStep();}
+function addGift(tid){state.tiers.find(x=>x.id===tid).gifts.push({id:uid(),title:"",titleZh:"",sizeMl:5,valueHkd:0,estimated:true,img:null,fullPriceHkd:0,fullSizeMl:0,nonMl:false,sizeOpts:null,sku:'',variantId:'',customImg:null,hidden:false});renderStep();}
 function delGift(tid,gid){const t=state.tiers.find(x=>x.id===tid);t.gifts=t.gifts.filter(g=>g.id!==gid);renderStep();}
 function toggleGift(tid,gid){gget(tid,gid).hidden=!gget(tid,gid).hidden;renderStep();}
 function toggleTier(id){const t=state.tiers.find(x=>x.id===id);t.hidden=!t.hidden;renderStep();}
@@ -436,7 +436,7 @@ function editGiftSize(tid,gid,v){const g=gget(tid,gid);g.sizeMl=+v||0;if(!g.nonM
 function markManual(tid,gid){gget(tid,gid).estimated=false;}
 function filterPick(tid,gid,q){const pl=document.getElementById('pl-'+tid+'-'+gid);pl.classList.add('open');const ql=(q||'').toLowerCase();const res=GIFTS.filter(p=>!ql||p.t.toLowerCase().includes(ql)||(p.z&&p.z.includes(q))).slice(0,60);pl.innerHTML=res.map(p=>`<div class="pi2" onmousedown="pickProduct('${tid}','${gid}',${GIFTS.indexOf(p)})"><img src="${p.i||PX}" onerror="this.src='${PX}'"><div style="flex:1"><div class="n">${escH(p.t)}</div><div class="m">${escH(p.z||'')} · ${p.n?('HK$'+p.v):(p.s.length?p.s.map(x=>x[0]+'mL').join(' / '):'sample')}</div></div></div>`).join('')||'<div class="pi2 m">No product found.</div>';}
 function closePick(k){const pl=document.getElementById('pl-'+k);if(pl)pl.classList.remove('open');}
-function pickProduct(tid,gid,idx){const p=GIFTS[idx];const g=gget(tid,gid);g.title=p.t;g.titleZh=p.z||"";g.img=p.i;g.nonMl=!!p.n;
+function pickProduct(tid,gid,idx){const p=GIFTS[idx];const g=gget(tid,gid);g.title=p.t;g.titleZh=p.z||"";g.img=p.i;g.customImg=null;g.nonMl=!!p.n;
   if(p.n){g.fullPriceHkd=0;g.fullSizeMl=0;g.sizeOpts=null;g.sizeMl=0;g.valueHkd=p.v||0;g.estimated=false;g.sku=p.sku||'';g.variantId=p.vid||'';}
   else{g.sizeOpts=p.s||[];g.sizeMl=(p.s&&p.s.length)?p.s[0][0]:(g.sizeMl||5);const cat=lookupCatalog(p.t);g.fullPriceHkd=cat?cat.p:0;g.fullSizeMl=cat?cat.ml:0;const r=giftValueFor(g);g.valueHkd=r.val;g.estimated=r.est;syncGiftSku(g);}
   renderStep();}
@@ -444,16 +444,20 @@ function setGiftSize(tid,gid,ml){editGiftSize(tid,gid,ml);}
 
 /* ---- STEP 4 ---- */
 function stepValues(){
-  let out=`<div class="step-title">Gift Values</div><div class="step-desc">Auto-calculated using the 40% per-mL premium formula from the travel-size pricing skill (rounded to nearest HK$5). Non-mL items (bags, accessories) require manual override.</div>
-   <button class="btn-ghost" style="width:100%;margin-bottom:10px" onclick="recalcAll()">Recalculate All Gift Values</button>`;
+  let out=`<div class="step-title">Gift Values</div><div class="step-desc">Auto-calculated using the 40% per-mL premium formula from the travel-size pricing skill. Non-mL items (bags, accessories) require manual override.</div>
+   <button class="btn-primary" style="width:100%;margin-bottom:16px;padding:13px;font-size:15px" onclick="recalcAll()">Recalculate All Gift Values</button>`;
   state.tiers.forEach((t,i)=>{
-    if(i===0){out+=`<div class="tier"><div class="tier-h"><span class="badge">Tier ${i+1}</span><span class="badge green">🚚 Free shipping only</span></div></div>`;return;}
-    out+=`<div class="tier${t.hidden?' hid':''}"><div class="tier-h"><span class="badge">Tier ${i+1}</span><span style="font-size:13px;color:var(--muted)">Spend HKD$</span><input type="number" style="max-width:110px" min="0" step="100" value="${t.amount}" oninput="setTierAmount('${t.id}',this.value)" title="Edit the spend threshold for this tier"><span class="badge amber">Total Worth HKD$${tierTotal(t)}</span></div>`;
+    const shipbar=`<div style="display:flex;align-items:center;justify-content:space-between;background:#e9f6ee;border:1px solid #cfe9d8;border-radius:10px;padding:10px 13px;margin:12px 0"><span style="font-weight:700;color:#2E8B57;font-size:13px">🚚 Free Shipping</span><span style="font-size:12px;color:#3b8a5c">Included in all tiers</span></div>`;
+    out+=`<div class="tier${t.hidden?' hid':''}" style="padding:16px 16px 18px;margin-bottom:16px">
+      <div class="tier-h" style="margin-bottom:0"><span class="badge">Tier ${i+1}</span><span style="font-size:14px;font-weight:600;color:var(--ink)">HKD$</span><input type="number" style="max-width:110px;font-weight:600" min="0" step="100" value="${t.amount}" oninput="setTierAmount('${t.id}',this.value)" title="Edit the spend threshold for this tier"><span class="badge amber" style="margin-left:auto;font-size:12px">Total Worth HKD$${tierTotal(t)}</span></div>
+      ${shipbar}`;
+    if(i===0){out+=`<div class="hint" style="font-style:italic;margin:4px 2px 0">Free Shipping only — no product gifts for this tier</div></div>`;return;}
     t.gifts.forEach((g,gi)=>{
-      out+=`<div class="gift${g.hidden?' hid':''}" draggable="true" ondragstart="dStart(event,'${t.id}','${g.id}')" ondragend="dEnd(event)" ondragover="event.preventDefault()" ondrop="dDrop(event,'${t.id}','${g.id}')"><div class="gift-h"><span style="color:var(--muted);cursor:grab">⠿</span><span class="gt">${escH(g.title||'Gift '+(gi+1))}</span><span class="badge">HK$${g.valueHkd||0}</span></div>`;
-      if(g.nonMl){out+=`<div class="hint">Non-mL item — enter value manually below.</div>`;}
-      else{out+=`<div class="grid4"><div class="cell"><div class="k">Full Price</div><div class="v">HK$${g.fullPriceHkd||0}</div></div><div class="cell"><div class="k">Full Size</div><div class="v">${g.fullSizeMl||0}mL</div></div><div class="cell"><div class="k">Gift Size</div><div class="v">${g.sizeMl||0}mL</div></div><div class="cell"><div class="k">Gift Value</div><div class="v">HK$${g.valueHkd||0}</div></div></div>`;}
-      out+=`<label class="f" style="margin:8px 0 3px">Override value (HK$)</label><input type="number" step="5" value="${g.valueHkd||0}" oninput="editGift('${t.id}','${g.id}','valueHkd',+this.value);markManual('${t.id}','${g.id}')"></div>`;
+      out+=`<div class="gift${g.hidden?' hid':''}" draggable="true" ondragstart="dStart(event,'${t.id}','${g.id}')" ondragend="dEnd(event)" ondragover="event.preventDefault()" ondrop="dDrop(event,'${t.id}','${g.id}')" style="background:#fff;padding:15px 16px;margin:12px 0">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px"><span style="color:var(--muted);cursor:grab;font-size:17px" title="Drag to reorder">⠿</span><span style="flex:1;font-size:15px;font-weight:700;color:var(--navy)">${escH(g.title||'Gift '+(gi+1))}</span><span class="badge amber" style="font-size:13px">HKD$${g.valueHkd||0}</span></div>`;
+      if(g.nonMl){out+=`<div class="hint" style="margin:0 0 10px">Non-mL item (bag/accessory) — set the value manually below.</div>`;}
+      else{out+=`<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:12px"><div><div style="font-size:12px;color:var(--muted);margin-bottom:2px">Full Price</div><div style="font-size:14px;font-weight:600;color:var(--ink)">HKD$${g.fullPriceHkd||0}</div></div><div><div style="font-size:12px;color:var(--muted);margin-bottom:2px">Full Size</div><div style="font-size:14px;font-weight:600;color:var(--ink)">${g.fullSizeMl||0}mL</div></div><div><div style="font-size:12px;color:var(--muted);margin-bottom:2px">Gift Size</div><div style="font-size:14px;font-weight:600;color:var(--ink)">${g.sizeMl||0}mL</div></div><div><div style="font-size:12px;color:var(--muted);margin-bottom:2px">Gift Value</div><div style="font-size:14px;font-weight:600;color:var(--navy)">HKD$${g.valueHkd||0}</div></div></div>`;}
+      out+=`<div style="display:flex;align-items:center;gap:10px"><span style="font-size:13px;font-weight:700;color:var(--ink)">Override:</span><input type="number" step="5" style="max-width:170px" value="${g.valueHkd||0}" oninput="editGift('${t.id}','${g.id}','valueHkd',+this.value);markManual('${t.id}','${g.id}')"></div></div>`;
     });
     out+=`</div>`;
   });
@@ -491,10 +495,32 @@ function stepPreview(){
    <div class="drop" onclick="document.getElementById('badgeUp').click()">Upload seasonal badge art</div>
    <input type="file" id="badgeUp" accept="image/*" style="display:none" onchange="upload(event,'seasonalBadge')">
    ${state.seasonalBadge?`<div class="thumbrow"><div class="bgthumb desktop"><img src="${state.seasonalBadge}" style="object-fit:contain;background:#fff"></div><button class="btn-danger mini" onclick="state.seasonalBadge=null;renderStep()">Remove</button></div>`:''}
+   <div class="sep"></div><div class="step-title" style="font-size:15px">Product Image Overrides</div>
+   <div class="hint">Replace a gift's Shopify photo with your own cleaner cutout (a transparent PNG looks best on the banner). Leave as-is to use the catalog photo.</div>
+   <div style="margin-top:8px">${productOverridesBlock()}</div>
    <div class="sep"></div><label class="f">Promotion Name</label>
    <input type="text" value="${escA(state.promoName)}" placeholder="e.g., August 2026 GWP" oninput="state.promoName=this.value">`;
 }
 function upload(ev,key){const f=ev.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{state[key]=r.result;renderStep();};r.readAsDataURL(f);ev.target.value='';}
+/* Per-gift image override: banner uses g.customImg when set, else the Shopify catalog photo. */
+function gimg(g){return g.customImg||g.img;}
+function productOverridesBlock(){
+  const rows=[];
+  state.tiers.forEach((t,ti)=>{ if(ti===0)return;
+    t.gifts.forEach(g=>{ if(g.hidden||!g.title)return;
+      const src=g.customImg||g.img||PX;
+      rows.push(`<div style="display:flex;align-items:center;gap:9px;padding:8px 0;border-top:1px solid var(--line)">
+        <img src="${src}" onerror="this.src='${PX}'" style="width:46px;height:46px;object-fit:contain;background:#fff;border:1px solid var(--line);border-radius:6px;flex-shrink:0">
+        <div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Tier ${ti+1} · ${escH(g.title)}</div><div style="font-size:11px;color:${g.customImg?'var(--green)':'var(--muted)'}">${g.customImg?'✓ custom image applied':'Shopify catalog photo'}</div></div>
+        <button class="btn-ghost mini" onclick="document.getElementById('gi-${t.id}-${g.id}').click()">⬆︎ Upload</button>
+        ${g.customImg?`<button class="btn-danger mini" onclick="resetGiftImg('${t.id}','${g.id}')">Reset</button>`:''}
+        <input type="file" id="gi-${t.id}-${g.id}" accept="image/*" style="display:none" onchange="uploadGiftImg(event,'${t.id}','${g.id}')"></div>`);
+    });
+  });
+  return rows.length?rows.join(''):`<div class="hint">Add gifts on the Gifts step first — they'll appear here to override.</div>`;
+}
+function uploadGiftImg(ev,tid,gid){const f=ev.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{gget(tid,gid).customImg=r.result;renderStep();toast('Gift image updated');};r.readAsDataURL(f);ev.target.value='';}
+function resetGiftImg(tid,gid){gget(tid,gid).customImg=null;renderStep();toast('Reverted to catalog photo');}
 function saveCurBg(kind){const d=kind==='desktop'?state.customBg:state.mobileBg;if(!d)return;bgLib[kind].push({id:uid(),label:'Saved '+new Date().toLocaleDateString(),data:d});lsSet('mschu_bg_'+kind,bgLib[kind]);renderStep();toast('Saved to library');}
 
 /* ---- STEP 6 ---- */
@@ -524,7 +550,7 @@ function buildBanner(f,l){
      +`<div style="position:absolute;top:20px;right:30px;width:100px;height:100px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,.1);z-index:10"><img src="${logoUrl()}" crossorigin="anonymous" style="width:90px;height:90px;object-fit:contain;border-radius:50%"></div>`
      +`<div style="margin-top:30px;background:#fff;padding:14px 60px;border-radius:4px;box-shadow:0 4px 12px rgba(0,0,0,.15);z-index:5"><h1 style="font-size:48px;font-weight:bold;color:#1B365D;margin:0;font-family:'Georgia',serif;letter-spacing:2px">${STR.spendOver[l]}</h1></div>`
      +`<div style="display:flex;justify-content:center;gap:20px;margin-top:30px;z-index:5;flex-wrap:wrap">${tiers.map(t=>`<div style="background:linear-gradient(135deg,#C41E3A 0%,#8B0000 100%);color:#fff;padding:10px 24px;border-radius:6px;font-size:32px;font-weight:bold;font-family:sans-serif;box-shadow:0 3px 8px rgba(0,0,0,.2);min-width:120px;text-align:center">$${t.amount.toLocaleString()}</div>`).join('')}</div>`
-     +`<div style="display:flex;justify-content:center;align-items:flex-end;gap:4px;margin-top:10px;flex:1;padding:0 20px;z-index:5">${tiers.map(t=>{const fg=t.gifts.filter(g=>!g.hidden&&g.img);const cw=Math.floor((1280-80)/tiers.length);return`<div style="display:flex;align-items:flex-end;justify-content:center;gap:2px;flex:1;max-width:${cw}px">${fg.length?fg.map(g=>imgTag(g.img,'height:160px;width:auto;max-width:120px;object-fit:contain')).join(''):`<div style="display:flex;flex-direction:column;align-items:center"><div style="font-size:64px;line-height:1">🚚</div><div style="font-size:20px;font-weight:bold;color:#2E8B57;font-family:sans-serif">${STR.ship[l]}</div></div>`}</div>`;}).join('')}</div>`
+     +`<div style="display:flex;justify-content:center;align-items:flex-end;gap:4px;margin-top:10px;flex:1;padding:0 20px;z-index:5">${tiers.map(t=>{const fg=t.gifts.filter(g=>!g.hidden&&(g.customImg||g.img));const cw=Math.floor((1280-80)/tiers.length);return`<div style="display:flex;align-items:flex-end;justify-content:center;gap:2px;flex:1;max-width:${cw}px">${fg.length?fg.map(g=>imgTag(gimg(g),'height:160px;width:auto;max-width:120px;object-fit:contain')).join(''):`<div style="display:flex;flex-direction:column;align-items:center"><div style="font-size:64px;line-height:1">🚚</div><div style="font-size:20px;font-weight:bold;color:#2E8B57;font-family:sans-serif">${STR.ship[l]}</div></div>`}</div>`;}).join('')}</div>`
      +`<div style="display:flex;justify-content:center;gap:16px;padding:0 40px;margin-top:8px;width:100%;z-index:5">${tiers.map(t=>{const tv=giftTotal(t);const cw=Math.floor((1280-80)/tiers.length);return`<div style="flex:1;max-width:${cw}px;text-align:center;font-size:26px;font-weight:bold;color:#1B365D;font-family:sans-serif">${tv>0?('$'+tv.toLocaleString()+' '+STR.valueH[l]):STR.ship[l]}</div>`;}).join('')}</div>`
      +`<div style="margin-top:20px;margin-bottom:30px;background:#fff;padding:14px 60px;border-radius:4px;box-shadow:0 4px 12px rgba(0,0,0,.15);z-index:5"><p style="font-size:36px;font-weight:bold;color:#C41E3A;margin:0;font-style:italic;font-family:${isZh?'"Noto Sans TC",sans-serif':'"Georgia",serif'}">${STR.cta[l]}</p></div>`;
     return{el,W,H};
@@ -536,10 +562,10 @@ function buildBanner(f,l){
     +`<p style="font-size:${f==='mobile'?22:24}px;color:#666;font-style:italic;margin:0;text-align:center">${STR.sub[l]}</p></div>`;
   let body='';
   if(f!=='mobile'){
-    body=`<div style="flex:1;display:flex;flex-direction:column;padding:0 50px">`+tiers.map(t=>{const fg=filledGifts(t),tv=giftTotal(t);const prod=fg.map(g=>`<div style="display:flex;align-items:center;gap:10px"><div style="font-size:26px;font-weight:bold;color:#1B365D;font-family:sans-serif;flex-shrink:0">+</div>${imgTag(g.img,'width:130px;height:130px;object-fit:contain;flex-shrink:0')}<div style="font-size:14px;color:#333;font-family:sans-serif;line-height:1.3;max-width:140px;font-weight:500">${escH(isZh?(g.titleZh||g.title):g.title)}${g.sizeMl?` ${g.sizeMl}mL`:''}</div></div>`).join('');
+    body=`<div style="flex:1;display:flex;flex-direction:column;padding:0 50px">`+tiers.map(t=>{const fg=filledGifts(t),tv=giftTotal(t);const prod=fg.map(g=>`<div style="display:flex;align-items:center;gap:10px"><div style="font-size:26px;font-weight:bold;color:#1B365D;font-family:sans-serif;flex-shrink:0">+</div>${imgTag(gimg(g),'width:130px;height:130px;object-fit:contain;flex-shrink:0')}<div style="font-size:14px;color:#333;font-family:sans-serif;line-height:1.3;max-width:140px;font-weight:500">${escH(isZh?(g.titleZh||g.title):g.title)}${g.sizeMl?` ${g.sizeMl}mL`:''}</div></div>`).join('');
       return`<div style="flex:1;display:flex;align-items:center;border-top:1px solid rgba(212,175,55,.3);padding:8px 0"><div style="width:220px;flex-shrink:0;padding-right:20px;border-right:2px solid rgba(212,175,55,.4)"><div style="font-size:44px;font-weight:bold;color:#1B365D;font-family:sans-serif;line-height:1.1">HKD ${t.amount.toLocaleString()}</div><div style="font-size:18px;color:#1B365D;font-family:sans-serif;font-weight:500;margin-top:2px">${STR.inOrder[l]}</div></div><div style="width:110px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding-left:14px"><div style="font-size:42px;line-height:1">🚚</div><div style="font-size:15px;color:#2E8B57;font-weight:bold;font-family:sans-serif;line-height:1.2;text-align:center;margin-top:2px">${STR.ship[l]}</div></div><div style="flex:1;display:flex;align-items:center;gap:12px;padding-left:16px;overflow:hidden">${prod}</div><div style="width:220px;flex-shrink:0;text-align:right;padding-left:10px">${tv>0?`<div style="font-size:20px;color:#1B365D;font-family:sans-serif;font-weight:500;line-height:1.2">${STR.valueD[l]}</div><div style="font-size:36px;font-weight:bold;color:#1B365D;font-family:sans-serif;line-height:1.1">HKD ${tv.toLocaleString()}</div>`:`<div style="font-size:32px;color:#2E8B57;font-family:sans-serif;font-weight:bold">✓</div>`}</div></div>`;}).join('')+`</div>`;
   }else{
-    body=`<div style="flex:1;display:flex;flex-direction:column;padding:0 24px;justify-content:space-evenly">`+tiers.map((t,idx)=>{const fg=filledGifts(t),tv=giftTotal(t),gc=fg.length,imgSize=gc<=2?120:gc<=4?100:80,nameF=gc<=3?16:14;const cells=fg.map(g=>`<div style="display:flex;flex-direction:column;align-items:center">${imgTag(g.img,`width:${imgSize}px;height:${imgSize}px;object-fit:contain;flex-shrink:0`)}<div style="font-size:${nameF}px;color:#333;font-family:sans-serif;line-height:1.2;text-align:center;margin-top:4px;max-width:${imgSize+20}px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical">${escH(isZh?(g.titleZh||g.title):g.title)}${g.sizeMl?` ${g.sizeMl}mL`:''}</div></div>`).join('');
+    body=`<div style="flex:1;display:flex;flex-direction:column;padding:0 24px;justify-content:space-evenly">`+tiers.map((t,idx)=>{const fg=filledGifts(t),tv=giftTotal(t),gc=fg.length,imgSize=gc<=2?120:gc<=4?100:80,nameF=gc<=3?16:14;const cells=fg.map(g=>`<div style="display:flex;flex-direction:column;align-items:center">${imgTag(gimg(g),`width:${imgSize}px;height:${imgSize}px;object-fit:contain;flex-shrink:0`)}<div style="font-size:${nameF}px;color:#333;font-family:sans-serif;line-height:1.2;text-align:center;margin-top:4px;max-width:${imgSize+20}px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical">${escH(isZh?(g.titleZh||g.title):g.title)}${g.sizeMl?` ${g.sizeMl}mL`:''}</div></div>`).join('');
       return`<div style="display:flex;align-items:center;padding:20px 0;gap:12px;position:relative;${idx<tiers.length-1?'border-bottom:1.5px solid rgba(200,200,200,.5)':''}"><div style="flex-shrink:0;min-width:110px"><div style="font-size:18px;color:#1B365D;font-family:sans-serif;font-weight:500;line-height:1.3">HKD</div><div style="font-size:52px;font-weight:bold;color:#1B365D;font-family:sans-serif;line-height:1">${t.amount.toLocaleString()}</div><div style="font-size:16px;color:#1B365D;font-family:sans-serif;margin-top:2px">${STR.inOrder[l]}</div></div><div style="display:flex;flex-direction:column;align-items:center;flex-shrink:0;min-width:80px"><div style="font-size:36px;line-height:1">🚚</div><div style="font-size:14px;color:#2E8B57;font-weight:bold;font-family:sans-serif;margin-top:4px;text-align:center">${STR.ship[l]}</div></div>${gc>0?`<div style="font-size:28px;font-weight:bold;color:#1B365D;font-family:sans-serif;flex-shrink:0">+</div>`:''}<div style="flex:1;display:grid;grid-template-columns:${gc<=1?'1fr':'repeat(2,1fr)'};gap:8px;align-content:center;justify-items:center">${cells}</div><div style="flex-shrink:0;text-align:right;min-width:110px">${tv>0?`<div style="font-size:18px;color:#1B365D;font-family:sans-serif;font-weight:500;line-height:1.2">${STR.valueM[l]}</div><div style="font-size:32px;font-weight:bold;color:#1B365D;font-family:sans-serif;line-height:1.1">HKD ${tv.toLocaleString()}</div>`:`<div style="font-size:22px;font-weight:bold;color:#2E8B57;font-family:sans-serif">= ${STR.ship[l]}</div>`}</div></div>`;}).join('')+`</div>`;
   }
   const foot=`<div style="height:${f==='mobile'?70:80}px;background:#1B365D;display:flex;align-items:center;justify-content:center;padding:0 ${f==='mobile'?30:40}px;flex-shrink:0;${f==='mobile'?'margin-top:8px':''}"><p style="color:#fff;font-size:${f==='mobile'?13:14}px;text-align:center;margin:0;font-family:sans-serif;line-height:1.4">${STR.disc[l]}</p></div>`;
