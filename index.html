@@ -324,6 +324,7 @@ function lsGet(k,def){try{const v=localStorage.getItem(k);return v?JSON.parse(v)
 function lsSet(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}
 let savedPromos=lsGet('mschu_promos',[]);
 let bgLib={desktop:lsGet('mschu_bg_desktop',[]),mobile:lsGet('mschu_bg_mobile',[])};
+let savedLogo=lsGet('mschu_logo',null); if(savedLogo)state.logo=savedLogo;   /* permanent default logo, remembered across sessions */
 
 /* =================== STEPPER =================== */
 function buildStepper(){
@@ -488,7 +489,7 @@ function stepPreview(){
    <label class="f">Brand Logo</label>
    <div class="drop" onclick="document.getElementById('logoUp').click()">Upload logo (defaults to the Ms. Chu mark)</div>
    <input type="file" id="logoUp" accept="image/*" style="display:none" onchange="upload(event,'logo')">
-   ${state.logo?`<div class="thumbrow"><div class="bgthumb desktop"><img src="${state.logo}" style="object-fit:contain;background:#fff"></div><button class="btn-danger mini" onclick="state.logo=null;renderStep()">Remove</button></div>`:''}
+   ${state.logo?`<div class="thumbrow"><div class="bgthumb desktop"><img src="${state.logo}" style="object-fit:contain;background:#fff"></div><button class="btn-danger mini" onclick="state.logo=null;savedLogo=null;lsSet('mschu_logo',null);renderStep()">Remove</button></div><div class="hint" style="color:var(--green);margin-top:4px">✓ Saved as your permanent default logo — appears on every banner, every session.</div>`:''}
    <label class="f">Seasonal Message Image (top-left, replaces the shield badge)</label>
    <div class="drop" onclick="document.getElementById('badgeUp').click()">Upload seasonal badge art</div>
    <input type="file" id="badgeUp" accept="image/*" style="display:none" onchange="upload(event,'seasonalBadge')">
@@ -499,7 +500,7 @@ function stepPreview(){
    <div class="sep"></div><label class="f">Promotion Name</label>
    <input type="text" value="${escA(state.promoName)}" placeholder="e.g., August 2026 GWP" oninput="state.promoName=this.value">`;
 }
-function upload(ev,key){const f=ev.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{state[key]=r.result;renderStep();};r.readAsDataURL(f);ev.target.value='';}
+function upload(ev,key){const f=ev.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{state[key]=r.result;if(key==='logo'){savedLogo=r.result;lsSet('mschu_logo',r.result);toast('Logo saved as your permanent default');}renderStep();};r.readAsDataURL(f);ev.target.value='';}
 /* Per-gift image override: banner uses g.customImg when set, else the Shopify catalog photo. */
 function gimg(g){return g.customImg||g.img;}
 function productOverridesBlock(){
@@ -599,8 +600,9 @@ async function generateAll(){
 }
 
 /* =================== SAVED PROMOTIONS =================== */
-function savePromo(){const name=state.promoName||('Promotion '+new Date().toLocaleDateString());const rec={id:uid(),name,theme:state.theme,date:new Date().toLocaleDateString(),state:JSON.parse(JSON.stringify(state))};savedPromos.unshift(rec);savedPromos=savedPromos.slice(0,12);lsSet('mschu_promos',savedPromos);toast('Promotion saved');}
-function loadPromo(id){const r=savedPromos.find(p=>p.id===id);if(!r)return;state=JSON.parse(JSON.stringify(r.state));renderStep();toast('Promotion loaded');}
+function stamp(){try{return new Date().toLocaleString('en-GB',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});}catch(e){return new Date().toLocaleString();}}
+function savePromo(){const name=state.promoName||('Promotion '+stamp());const rec={id:uid(),name,theme:state.theme,date:stamp(),state:JSON.parse(JSON.stringify(state))};savedPromos.unshift(rec);savedPromos=savedPromos.slice(0,12);lsSet('mschu_promos',savedPromos);toast('Promotion saved');}
+function loadPromo(id){const r=savedPromos.find(p=>p.id===id);if(!r)return;state=JSON.parse(JSON.stringify(r.state));if(!state.logo&&savedLogo)state.logo=savedLogo;renderStep();toast('Promotion loaded');}
 function delPromo(id){savedPromos=savedPromos.filter(p=>p.id!==id);lsSet('mschu_promos',savedPromos);renderStep();}
 
 /* =================== JSON IMPORT/EXPORT =================== */
