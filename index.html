@@ -352,7 +352,7 @@ function renderStep(){
 /* ---- STEP 1 ---- */
 function stepTheme(){
   const g=THEMES.map(t=>`<div class="theme${state.theme===t.id?' sel':''}" onclick="setTheme('${t.id}')"><div class="em">${t.em}</div><div class="nm">${t.label}</div><div class="zh">${t.zh}</div></div>`).join('');
-  const saved=savedPromos.length?savedPromos.map(p=>`<div class="savedcard"><div class="nm">${escH(p.name||'Untitled')}</div><div class="mt">${THEMES.find(x=>x.id===p.theme)?.em||''} ${escH(p.theme||'')} · ${p.date||''}</div><div style="display:flex;gap:6px;margin-top:auto"><button class="btn-ghost mini" onclick="loadPromo('${p.id}')">Load</button><button class="btn-danger mini" onclick="delPromo('${p.id}')">Delete</button></div></div>`).join('')
+  const saved=savedPromos.length?savedPromos.map(p=>`<div class="savedcard"><div class="nm">${escH(p.name||'Untitled')}</div><div class="mt">${THEMES.find(x=>x.id===p.theme)?.em||''} ${escH(p.theme||'')} · ${p.date||''}</div><div style="display:flex;gap:6px;margin-top:auto;flex-wrap:wrap"><button class="btn-ghost mini" onclick="loadPromo('${p.id}')">Load</button><button class="btn-ghost mini" onclick="exportPromo('${p.id}')">⬇︎ Export</button><button class="btn-danger mini" onclick="delPromo('${p.id}')">Delete</button></div></div>`).join('')
     :`<div class="savedcard empty">No saved promotions yet</div><div class="savedcard empty">Save from the Generate step</div>`;
   return `<div class="step-title">Choose a Theme</div><div class="step-desc">Select a visual theme for your promotion banners</div>
    <label class="f">Promotion Name</label>
@@ -362,7 +362,9 @@ function stepTheme(){
    <div class="sep"></div><label class="f">Custom Theme Prompt (optional)</label>
    <input type="text" value="${escA(state.customPrompt)}" placeholder="e.g., Tropical paradise with palm leaves and ocean waves..." oninput="state.customPrompt=this.value">
    <div class="hint">Add extra details to customize the banner style beyond the preset theme</div>
-   <div class="sep"></div><div class="step-title" style="font-size:15px">Saved Promotions</div><div class="saved" style="margin-top:10px">${saved}</div>
+   <div class="sep"></div><div class="step-title" style="font-size:15px">Saved Promotions</div>
+   <div class="hint" style="color:#b06a12">⚠ These are stored in <b>this browser only</b> and are size-limited — a few saves with images can hit the limit and drop older ones. For a <b>permanent copy</b>, use <b>Export JSON</b> (top of page) or a save's <b>⬇︎ Export</b> button, and reload it later with <b>Import</b>.</div>
+   <div class="saved" style="margin-top:10px">${saved}</div>
    <div class="sep"></div><div class="step-title" style="font-size:15px">Background Library</div>
    <div class="hint">Save reusable background images, then click one to apply it.</div>
    ${bgLibBlock('desktop')}${bgLibBlock('mobile')}`;
@@ -614,7 +616,19 @@ async function generateAll(){
 
 /* =================== SAVED PROMOTIONS =================== */
 function stamp(){try{return new Date().toLocaleString('en-GB',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});}catch(e){return new Date().toLocaleString();}}
-function savePromo(){const name=state.promoName||('Promotion '+stamp());const rec={id:uid(),name,theme:state.theme,date:stamp(),state:JSON.parse(JSON.stringify(state))};savedPromos.unshift(rec);savedPromos=savedPromos.slice(0,12);lsSet('mschu_promos',savedPromos);toast('Promotion saved');}
+function savePromo(){
+  const name=state.promoName||('Promotion '+stamp());
+  const rec={id:uid(),name,theme:state.theme,date:stamp(),state:JSON.parse(JSON.stringify(state))};
+  savedPromos.unshift(rec); savedPromos=savedPromos.slice(0,12);
+  const trySave=()=>{try{localStorage.setItem('mschu_promos',JSON.stringify(savedPromos));return true;}catch(e){return false;}};
+  let ok=trySave(), dropped=0;
+  while(!ok && savedPromos.length>1){savedPromos.pop();dropped++;ok=trySave();}   // free space by dropping oldest
+  renderStep();
+  if(ok && !dropped) toast('Promotion saved');
+  else if(ok && dropped) toast('Saved — but browser storage was full, so '+dropped+' oldest save(s) were removed. Use Export JSON for a permanent copy.');
+  else toast('⚠ Browser storage is full — this save won’t persist. Use Export JSON to keep a permanent copy.');
+}
+function exportPromo(id){const r=savedPromos.find(p=>p.id===id);if(!r)return;dl('data:application/json;charset=utf-8,'+encodeURIComponent(JSON.stringify(r.state,null,2)),(r.name||'promotion').replace(/[^\w一-龥-]+/g,'_')+'.json');toast('Downloaded a permanent copy');}
 function loadPromo(id){const r=savedPromos.find(p=>p.id===id);if(!r)return;state=JSON.parse(JSON.stringify(r.state));if(!state.logo&&savedLogo)state.logo=savedLogo;renderStep();toast('Promotion loaded');}
 function delPromo(id){savedPromos=savedPromos.filter(p=>p.id!==id);lsSet('mschu_promos',savedPromos);renderStep();}
 
