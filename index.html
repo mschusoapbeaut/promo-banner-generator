@@ -288,7 +288,7 @@ let step=1, maxReached=1, dragSrc=null, dFmt="desktop", dLang="en", pickOpen=nul
 let state=defaultState();
 function defaultState(){return{
   theme:"summer", promoName:"", customPrompt:"",
-  customBg:null, mobileBg:null, logo:null, seasonalBadge:null,
+  customBg:null, mobileBg:null, logo:null, seasonalBadge:null, centerScrim:false,
   tiers:[
     {id:"1",amount:500,gifts:[],hidden:false},
     {id:"2",amount:700,gifts:[newGift("Hydrating Cleanser",15)],hidden:false},
@@ -374,9 +374,9 @@ function bgLibBlock(kind){
   return `<label class="f">${kind==='desktop'?'Desktop backgrounds (16:9)':'Mobile backgrounds (9:16)'}</label>
    <div class="thumbrow">${thumbs||'<span class="hint">None saved yet.</span>'}</div>
    <button class="btn-ghost mini" style="margin-top:8px" onclick="document.getElementById('bglib-${kind}').click()">+ Upload to library</button>
-   <input type="file" id="bglib-${kind}" accept="image/*" style="display:none" onchange="uploadBgLib(event,'${kind}')">`;
+   <input type="file" id="bglib-${kind}" accept="image/*,application/pdf" style="display:none" onchange="uploadBgLib(event,'${kind}')">`;
 }
-function uploadBgLib(ev,kind){const f=ev.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{const it={id:uid(),label:f.name,data:r.result};bgLib[kind].push(it);lsSet('mschu_bg_'+kind,bgLib[kind]);if(kind==='desktop')state.customBg=it.data;else state.mobileBg=it.data;renderStep();toast('Saved to library & applied');};r.readAsDataURL(f);ev.target.value='';}
+function uploadBgLib(ev,kind){const f=ev.target.files[0];if(!f)return;const add=(data)=>{const it={id:uid(),label:f.name,data};bgLib[kind].push(it);lsSet('mschu_bg_'+kind,bgLib[kind]);if(kind==='desktop')state.customBg=data;else state.mobileBg=data;renderStep();toast('Saved to library & applied');};const isPdf=(f.type==='application/pdf')||/\.pdf$/i.test(f.name||'');if(isPdf){toast('Rendering PDF…');pdfToDataUrl(f).then(add).catch(()=>toast('Could not read that PDF'));}else{const r=new FileReader();r.onload=()=>add(r.result);r.readAsDataURL(f);}ev.target.value='';}
 function applyBg(kind,id){const b=bgLib[kind].find(x=>x.id===id);if(!b)return;if(kind==='desktop')state.customBg=b.data;else state.mobileBg=b.data;renderStep();toast('Background applied');}
 function delBg(kind,id){bgLib[kind]=bgLib[kind].filter(x=>x.id!==id);lsSet('mschu_bg_'+kind,bgLib[kind]);renderStep();}
 
@@ -476,23 +476,26 @@ function stepPreview(){
    ${sum}
    <button class="btn-primary" style="width:100%" onclick="openDialog()">👁 Preview Banner</button>
    <div class="sep"></div>
+   <label class="f" style="display:flex;align-items:center;gap:9px;cursor:pointer"><input type="checkbox" ${state.centerScrim?'checked':''} onchange="state.centerScrim=this.checked;renderStep()" style="width:auto;margin:0"> Add a soft white panel behind the text</label>
+   <div class="hint">Lays a 90%-white rounded panel over the centre so the text stays readable on a busy uploaded background. Toggle on, then Preview.</div>
+   <div class="sep"></div>
    <label class="f">Custom Background Image (desktop 1920×1080)</label>
-   <div class="drop" onclick="document.getElementById('bgUp').click()">Drag &amp; drop or click to upload</div>
-   <input type="file" id="bgUp" accept="image/*" style="display:none" onchange="upload(event,'customBg')">
+   <div class="drop" onclick="document.getElementById('bgUp').click()" ondragover="upOver(event)" ondragleave="upLeave(event)" ondrop="upDrop(event,'customBg')">Drag &amp; drop or click to upload (image or PDF)</div>
+   <input type="file" id="bgUp" accept="image/*,application/pdf" style="display:none" onchange="upload(event,'customBg')">
    ${state.customBg?`<div class="thumbrow"><div class="bgthumb desktop"><img src="${state.customBg}"></div><button class="btn-ghost mini" onclick="saveCurBg('desktop')">Save to library</button><button class="btn-danger mini" onclick="state.customBg=null;renderStep()">Remove</button></div>`:''}
    ${bgLibBlock('desktop')}
    <label class="f">Mobile Background Image (1080×1920)</label>
-   <div class="drop" onclick="document.getElementById('mbgUp').click()">Portrait background (falls back to desktop if empty)</div>
-   <input type="file" id="mbgUp" accept="image/*" style="display:none" onchange="upload(event,'mobileBg')">
+   <div class="drop" onclick="document.getElementById('mbgUp').click()" ondragover="upOver(event)" ondragleave="upLeave(event)" ondrop="upDrop(event,'mobileBg')">Portrait background (image or PDF; falls back to desktop if empty)</div>
+   <input type="file" id="mbgUp" accept="image/*,application/pdf" style="display:none" onchange="upload(event,'mobileBg')">
    ${state.mobileBg?`<div class="thumbrow"><div class="bgthumb mobile"><img src="${state.mobileBg}"></div><button class="btn-ghost mini" onclick="saveCurBg('mobile')">Save to library</button><button class="btn-danger mini" onclick="state.mobileBg=null;renderStep()">Remove</button></div>`:''}
    ${bgLibBlock('mobile')}
    <label class="f">Brand Logo</label>
-   <div class="drop" onclick="document.getElementById('logoUp').click()">Upload logo (defaults to the Ms. Chu mark)</div>
-   <input type="file" id="logoUp" accept="image/*" style="display:none" onchange="upload(event,'logo')">
+   <div class="drop" onclick="document.getElementById('logoUp').click()" ondragover="upOver(event)" ondragleave="upLeave(event)" ondrop="upDrop(event,'logo')">Upload logo — image or PDF (defaults to the Ms. Chu mark)</div>
+   <input type="file" id="logoUp" accept="image/*,application/pdf" style="display:none" onchange="upload(event,'logo')">
    ${state.logo?`<div class="thumbrow"><div class="bgthumb desktop"><img src="${state.logo}" style="object-fit:contain;background:#fff"></div><button class="btn-danger mini" onclick="state.logo=null;savedLogo=null;lsSet('mschu_logo',null);renderStep()">Remove</button></div><div class="hint" style="color:var(--green);margin-top:4px">✓ Saved as your permanent default logo — appears on every banner, every session.</div>`:''}
    <label class="f">Seasonal Message Image (top-left, replaces the shield badge)</label>
-   <div class="drop" onclick="document.getElementById('badgeUp').click()">Upload seasonal badge art</div>
-   <input type="file" id="badgeUp" accept="image/*" style="display:none" onchange="upload(event,'seasonalBadge')">
+   <div class="drop" onclick="document.getElementById('badgeUp').click()" ondragover="upOver(event)" ondragleave="upLeave(event)" ondrop="upDrop(event,'seasonalBadge')">Upload seasonal badge art (image or PDF)</div>
+   <input type="file" id="badgeUp" accept="image/*,application/pdf" style="display:none" onchange="upload(event,'seasonalBadge')">
    ${state.seasonalBadge?`<div class="thumbrow"><div class="bgthumb desktop"><img src="${state.seasonalBadge}" style="object-fit:contain;background:#fff"></div><button class="btn-danger mini" onclick="state.seasonalBadge=null;renderStep()">Remove</button></div>`:''}
    <div class="sep"></div><div class="step-title" style="font-size:15px">Product Image Overrides</div>
    <div class="hint">Replace a gift's Shopify photo with your own cleaner cutout (a transparent PNG looks best on the banner). Leave as-is to use the catalog photo.</div>
@@ -500,7 +503,16 @@ function stepPreview(){
    <div class="sep"></div><label class="f">Promotion Name</label>
    <input type="text" value="${escA(state.promoName)}" placeholder="e.g., August 2026 GWP" oninput="state.promoName=this.value">`;
 }
-function upload(ev,key){const f=ev.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{state[key]=r.result;if(key==='logo'){savedLogo=r.result;lsSet('mschu_logo',r.result);toast('Logo saved as your permanent default');}renderStep();};r.readAsDataURL(f);ev.target.value='';}
+function setUploadedImage(key,url){state[key]=url;if(key==='logo'){savedLogo=url;lsSet('mschu_logo',url);toast('Logo saved as your permanent default');}renderStep();}
+function fileToState(f,key){if(!f)return;const isPdf=(f.type==='application/pdf')||/\.pdf$/i.test(f.name||'');if(isPdf){toast('Rendering PDF…');pdfToDataUrl(f).then(u=>setUploadedImage(key,u)).catch(()=>toast('Could not read that PDF'));return;}const r=new FileReader();r.onload=()=>setUploadedImage(key,r.result);r.readAsDataURL(f);}
+function upload(ev,key){fileToState(ev.target.files[0],key);ev.target.value='';}
+/* Drag & drop handlers for the upload drop-zones */
+function upOver(e){e.preventDefault();e.currentTarget.style.borderColor='var(--navy)';e.currentTarget.style.background='#fffdf6';}
+function upLeave(e){e.currentTarget.style.borderColor='';e.currentTarget.style.background='';}
+function upDrop(e,key){e.preventDefault();upLeave(e);const f=e.dataTransfer&&e.dataTransfer.files&&e.dataTransfer.files[0];fileToState(f,key);}
+/* PDF → PNG (first page); lazy-loads pdf.js from CDN */
+function loadPdfJs(){return new Promise((res,rej)=>{if(window.pdfjsLib)return res();const s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';s.onload=()=>{try{pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';}catch(e){}res();};s.onerror=rej;document.head.appendChild(s);});}
+async function pdfToDataUrl(f){await loadPdfJs();const buf=await f.arrayBuffer();const pdf=await pdfjsLib.getDocument({data:buf}).promise;const page=await pdf.getPage(1);const vp=page.getViewport({scale:2});const c=document.createElement('canvas');c.width=vp.width;c.height=vp.height;await page.render({canvasContext:c.getContext('2d'),viewport:vp}).promise;return c.toDataURL('image/png');}
 /* Per-gift image override: banner uses g.customImg when set, else the Shopify catalog photo. */
 function gimg(g){return g.customImg||g.img;}
 function productOverridesBlock(){
@@ -516,7 +528,7 @@ function productOverridesBlock(){
         ${imgs.length>1?`<button class="btn-ghost mini${open?' btn-primary':''}" onclick="togglePick('${t.id}','${g.id}')">🖼 Pick</button>`:''}
         <button class="btn-ghost mini" onclick="document.getElementById('gi-${t.id}-${g.id}').click()">⬆︎ Upload Cutout</button>
         ${g.customImg?`<button class="btn-danger mini" onclick="resetGiftImg('${t.id}','${g.id}')">Reset</button>`:''}
-        <input type="file" id="gi-${t.id}-${g.id}" accept="image/*" style="display:none" onchange="uploadGiftImg(event,'${t.id}','${g.id}')"></div>`;
+        <input type="file" id="gi-${t.id}-${g.id}" accept="image/*,application/pdf" style="display:none" onchange="uploadGiftImg(event,'${t.id}','${g.id}')"></div>`;
       if(open){row+=`<div style="margin:9px 0 2px 55px;padding:11px;background:var(--cream);border:1px solid var(--line);border-radius:10px"><div class="hint" style="margin:0 0 7px">Choose from this product's Shopify images:</div><div style="display:flex;gap:8px;flex-wrap:wrap">${imgs.map(u=>`<img src="${u}" onerror="this.style.display='none'" onclick="selectGiftImg('${t.id}','${g.id}','${u}')" style="width:66px;height:66px;object-fit:contain;background:#fff;border:2px solid ${g.customImg===u?'var(--navy)':'var(--line)'};border-radius:8px;cursor:pointer">`).join('')}</div></div>`;}
       rows.push(row+`</div>`);
     });
@@ -575,7 +587,8 @@ function buildBanner(f,l){
       return`<div style="display:flex;align-items:center;padding:20px 0;gap:12px;position:relative;${idx<tiers.length-1?'border-bottom:1.5px solid rgba(200,200,200,.5)':''}"><div style="flex-shrink:0;min-width:110px"><div style="font-size:18px;color:#1B365D;font-family:sans-serif;font-weight:500;line-height:1.3">HKD</div><div style="font-size:52px;font-weight:bold;color:#1B365D;font-family:sans-serif;line-height:1">${t.amount.toLocaleString()}</div><div style="font-size:16px;color:#1B365D;font-family:sans-serif;margin-top:2px">${STR.inOrder[l]}</div></div><div style="display:flex;flex-direction:column;align-items:center;flex-shrink:0;min-width:80px"><div style="font-size:36px;line-height:1">🚚</div><div style="font-size:14px;color:#2E8B57;font-weight:bold;font-family:sans-serif;margin-top:4px;text-align:center">${STR.ship[l]}</div></div>${gc>0?`<div style="font-size:28px;font-weight:bold;color:#1B365D;font-family:sans-serif;flex-shrink:0">+</div>`:''}<div style="flex:1;display:grid;grid-template-columns:${gc<=1?'1fr':'repeat(2,1fr)'};gap:8px;align-content:center;justify-items:center">${cells}</div><div style="flex-shrink:0;text-align:right;min-width:110px">${tv>0?`<div style="font-size:18px;color:#1B365D;font-family:sans-serif;font-weight:500;line-height:1.2">${STR.valueM[l]}</div><div style="font-size:32px;font-weight:bold;color:#1B365D;font-family:sans-serif;line-height:1.1">HKD ${tv.toLocaleString()}</div>`:`<div style="font-size:22px;font-weight:bold;color:#2E8B57;font-family:sans-serif">= ${STR.ship[l]}</div>`}</div></div>`;}).join('')+`</div>`;
   }
   const foot=`<div style="height:${f==='mobile'?70:80}px;background:#1B365D;display:flex;align-items:center;justify-content:center;padding:0 ${f==='mobile'?30:40}px;flex-shrink:0;${f==='mobile'?'margin-top:8px':''}"><p style="color:#fff;font-size:${f==='mobile'?13:14}px;text-align:center;margin:0;font-family:sans-serif;line-height:1.4">${STR.disc[l]}</p></div>`;
-  el.innerHTML=(bg?'':botanical())+`<div style="position:absolute;top:12px;left:12px;right:12px;bottom:12px;border:2px solid rgba(212,175,55,.4);border-radius:4px;pointer-events:none"></div>`+header+body+foot;
+  const scrim=(state.centerScrim&&bg)?`<div style="position:absolute;inset:${f==='mobile'?'6% 6%':'9% 5%'};background:rgba(255,255,255,.9);border-radius:28px;z-index:0;box-shadow:0 8px 44px rgba(0,0,0,.07)"></div>`:'';
+  el.innerHTML=(bg?'':botanical())+`<div style="position:absolute;top:12px;left:12px;right:12px;bottom:12px;border:2px solid rgba(212,175,55,.4);border-radius:4px;pointer-events:none;z-index:3"></div>`+scrim+`<div style="position:relative;z-index:1;display:flex;flex-direction:column;flex:1;min-height:0">`+header+body+foot+`</div>`;
   return{el,W,H};
 }
 
