@@ -551,6 +551,8 @@ function stepPreview(){
    ${state.seasonalBadge?`<div class="thumbrow"><div class="bgthumb desktop"><img src="${state.seasonalBadge}" style="object-fit:contain;background:#fff"></div><button class="btn-danger mini" onclick="state.seasonalBadge=null;renderStep()">Remove</button></div>`:''}
    <div class="sep"></div><div class="step-title" style="font-size:15px">Product Image Overrides</div>
    <div class="hint">Replace a gift's Shopify photo with your own cleaner cutout (a transparent PNG looks best on the banner). Leave as-is to use the catalog photo.</div>
+   <div class="row" style="margin:9px 0;gap:8px"><button class="btn-primary" onclick="cutoutAllGifts()">✂️ Cut out white — all gifts</button><button class="btn-ghost" onclick="resetAllCutouts()">↩︎ Undo cut-outs</button></div>
+   <div class="hint" style="margin-top:-2px">Removes the white box around a product photo so it sits cleanly on the banner (white parts of the product itself — caps, labels — are kept). Use <b>✂️ Cut white</b> on any single gift below to pick exactly the ones you want, or the button above to do them all at once.</div>
    <div style="margin-top:8px">${productOverridesBlock()}</div>
    <div class="sep"></div><label class="f">Promotion Name</label>
    <input type="text" value="${escA(state.promoName)}" placeholder="e.g., August 2026 GWP" oninput="state.promoName=this.value">`;
@@ -578,6 +580,7 @@ function productOverridesBlock(){
         <img src="${src}" onerror="this.src='${PX}'" style="width:46px;height:46px;object-fit:contain;background:#fff;border:1px solid var(--line);border-radius:6px;flex-shrink:0">
         <div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Tier ${ti+1} · ${escH(g.title)}</div><div style="font-size:11px;color:${g.customImg?'var(--green)':'var(--muted)'}">${g.customImg?'✓ custom image applied':'Shopify catalog photo'}</div></div>
         ${imgs.length>1?`<button class="btn-ghost mini${open?' btn-primary':''}" onclick="togglePick('${t.id}','${g.id}')">🖼 Pick</button>`:''}
+        <button class="btn-ghost mini" onclick="cutoutOneGift('${t.id}','${g.id}')">✂️ Cut white</button>
         <button class="btn-ghost mini" onclick="document.getElementById('gi-${t.id}-${g.id}').click()">⬆︎ Upload Cutout</button>
         ${g.customImg?`<button class="btn-danger mini" onclick="resetGiftImg('${t.id}','${g.id}')">Reset</button>`:''}
         <input type="file" id="gi-${t.id}-${g.id}" accept="image/*,application/pdf" style="display:none" onchange="uploadGiftImg(event,'${t.id}','${g.id}')"></div>`;
@@ -591,6 +594,50 @@ function togglePick(tid,gid){pickOpen=(pickOpen===tid+'-'+gid)?null:tid+'-'+gid;
 function selectGiftImg(tid,gid,url){gget(tid,gid).customImg=url;pickOpen=null;renderStep();toast('Image selected');}
 function uploadGiftImg(ev,tid,gid){const f=ev.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{gget(tid,gid).customImg=r.result;pickOpen=null;renderStep();toast('Gift image updated');};r.readAsDataURL(f);ev.target.value='';}
 function resetGiftImg(tid,gid){gget(tid,gid).customImg=null;renderStep();toast('Reverted to catalog photo');}
+/* ---- Die-cut: remove the white background around a product photo (edge flood-fill keeps interior whites) ---- */
+let _cutBackup=null;
+function _loadImage(src){return new Promise((res,rej)=>{const i=new Image();i.crossOrigin='anonymous';i.onload=()=>res(i);i.onerror=()=>rej(new Error('load'));i.src=src;});}
+async function _imgForCanvas(src){
+  if(src.indexOf('data:')===0) return await _loadImage(src);
+  const r=await fetch(src,{mode:'cors'}); if(!r.ok) throw new Error('fetch'); const b=await r.blob();
+  const u=URL.createObjectURL(b); try{ const im=await _loadImage(u); im._objurl=u; return im; }catch(e){ URL.revokeObjectURL(u); throw e; }
+}
+async function cutoutWhiteImg(src){
+  const img=await _imgForCanvas(src);
+  let w=img.naturalWidth||img.width, h=img.naturalHeight||img.height; const MAX=440;
+  if(w>MAX||h>MAX){const s=MAX/Math.max(w,h);w=Math.round(w*s);h=Math.round(h*s);}
+  const c=document.createElement('canvas');c.width=w;c.height=h;const ctx=c.getContext('2d');ctx.drawImage(img,0,0,w,h);
+  if(img._objurl)URL.revokeObjectURL(img._objurl);
+  const d=ctx.getImageData(0,0,w,h),px=d.data,N=w*h,thr=238,seen=new Uint8Array(N),st=[];
+  const white=i=>px[i]>=thr&&px[i+1]>=thr&&px[i+2]>=thr;
+  const seed=p=>{if(!seen[p]&&white(p*4)){seen[p]=1;st.push(p);}};
+  for(let x=0;x<w;x++){seed(x);seed((h-1)*w+x);}
+  for(let y=0;y<h;y++){seed(y*w);seed(y*w+w-1);}
+  while(st.length){const p=st.pop();px[p*4+3]=0;const x=p%w,y=(p/w)|0;
+    if(x+1<w)seed(p+1);if(x>0)seed(p-1);if(y+1<h)seed(p+w);if(y>0)seed(p-w);}
+  ctx.putImageData(d,0,0);
+  return c.toDataURL('image/png');
+}
+async function cutoutAllGifts(){
+  toast('Cutting out white backgrounds…');
+  _cutBackup={}; const cache={}; let done=0,fail=0;
+  for(const t of state.tiers){ for(const g of (t.gifts||[])){ if(g.hidden||!g.title)continue; const src=gimg(g); if(!src)continue;
+    try{ if(cache[src]===undefined) cache[src]=await cutoutWhiteImg(src); _cutBackup[g.id]=(g.customImg||null); g.customImg=cache[src]; done++; }
+    catch(e){ fail++; }
+  }}
+  renderStep();
+  toast(done+' gift image(s) cut out'+(fail?(' · '+fail+' could not be read'):'')+'. Hit Preview to see them.');
+}
+async function cutoutOneGift(tid,gid){
+  const g=gget(tid,gid); if(!g)return; const src=gimg(g); if(!src){toast('No image to cut');return;}
+  toast('Cutting out white background…');
+  try{ if(!_cutBackup)_cutBackup={}; _cutBackup[g.id]=(g.customImg||null); g.customImg=await cutoutWhiteImg(src); renderStep(); toast('White background removed — Preview to see it'); }
+  catch(e){ toast('Could not read that image (access blocked)'); }
+}
+function resetAllCutouts(){
+  if(_cutBackup){ state.tiers.forEach(t=>t.gifts.forEach(g=>{ if(_cutBackup[g.id]!==undefined) g.customImg=_cutBackup[g.id]; })); _cutBackup=null; renderStep(); toast('Cut-outs undone'); }
+  else toast('Nothing to undo');
+}
 function saveCurBg(kind){const d=kind==='desktop'?state.customBg:state.mobileBg;if(!d)return;bgLib[kind].push({id:uid(),label:'Saved '+new Date().toLocaleDateString(),data:d});lsSet('mschu_bg_'+kind,bgLib[kind]);renderStep();toast('Saved to library');}
 
 /* ---- STEP 6 ---- */
