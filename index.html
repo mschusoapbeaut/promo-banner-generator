@@ -363,7 +363,8 @@ function stepTheme(){
    <input type="text" value="${escA(state.customPrompt)}" placeholder="e.g., Tropical paradise with palm leaves and ocean waves..." oninput="state.customPrompt=this.value">
    <div class="hint">Add extra details to customize the banner style beyond the preset theme</div>
    <div class="sep"></div><div class="step-title" style="font-size:15px">Saved Promotions</div>
-   <div class="hint" style="color:#b06a12">⚠ These are stored in <b>this browser only</b> and are size-limited — a few saves with images can hit the limit and drop older ones. For a <b>permanent copy</b>, use <b>Export JSON</b> (top of page) or a save's <b>⬇︎ Export</b> button, and reload it later with <b>Import</b>.</div>
+   <div class="hint" style="color:#2E8B57">✓ Every time you hit <b>Save Promotion</b> (Generate step), a permanent <b>JSON backup downloads to your computer</b> automatically. Reload any backup anytime with <b>Import</b> (top of page).</div>
+   <div class="hint" style="color:#b06a12">Note: the cards below are stored in <b>this browser only</b> and are size-limited, so older ones may drop — but your downloaded JSON backups never expire.</div>
    <div class="saved" style="margin-top:10px">${saved}</div>
    <div class="sep"></div><div class="step-title" style="font-size:15px">Background Library</div>
    <div class="hint">Save reusable background images, then click one to apply it.</div>
@@ -624,9 +625,13 @@ function savePromo(){
   let ok=trySave(), dropped=0;
   while(!ok && savedPromos.length>1){savedPromos.pop();dropped++;ok=trySave();}   // free space by dropping oldest
   renderStep();
-  if(ok && !dropped) toast('Promotion saved');
-  else if(ok && dropped) toast('Saved — but browser storage was full, so '+dropped+' oldest save(s) were removed. Use Export JSON for a permanent copy.');
-  else toast('⚠ Browser storage is full — this save won’t persist. Use Export JSON to keep a permanent copy.');
+  // always download a permanent JSON backup so nothing is ever lost
+  let dl_ok=true;
+  try{ dl('data:application/json;charset=utf-8,'+encodeURIComponent(JSON.stringify(rec.state,null,2)), (name.replace(/[^\w一-龥-]+/g,'_')||'promotion')+'_'+stamp().replace(/[^\dA-Za-z]+/g,'-')+'.json'); }catch(e){ dl_ok=false; }
+  const bk=dl_ok?' — a JSON backup was downloaded to your computer.':'';
+  if(ok && !dropped) toast('Promotion saved'+bk);
+  else if(ok && dropped) toast('Saved ('+dropped+' oldest browser-save(s) removed to free space)'+bk);
+  else toast('⚠ Browser storage full — kept only the downloaded JSON backup. Re-load it anytime with Import.'+ (dl_ok?'':' Backup download was blocked — use Export JSON.'));
 }
 function exportPromo(id){const r=savedPromos.find(p=>p.id===id);if(!r)return;dl('data:application/json;charset=utf-8,'+encodeURIComponent(JSON.stringify(r.state,null,2)),(r.name||'promotion').replace(/[^\w一-龥-]+/g,'_')+'.json');toast('Downloaded a permanent copy');}
 function loadPromo(id){const r=savedPromos.find(p=>p.id===id);if(!r)return;state=JSON.parse(JSON.stringify(r.state));if(!state.logo&&savedLogo)state.logo=savedLogo;renderStep();toast('Promotion loaded');}
