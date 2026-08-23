@@ -326,6 +326,50 @@ let savedPromos=lsGet('mschu_promos',[]);
 let bgLib={desktop:lsGet('mschu_bg_desktop',[]),mobile:lsGet('mschu_bg_mobile',[])};
 let savedLogo=lsGet('mschu_logo',null); if(savedLogo)state.logo=savedLogo;   /* permanent default logo, remembered across sessions */
 
+/* =================== COMMAND CENTER SYNC ===================
+   Pushes each saved promotion to the Ms. Chu Command Center dashboard so it
+   appears automatically in the Stock Reallocation campaign dropdown.
+   The dashboard side builds a matching receiver at CC_SYNC_URL that:
+     - accepts a POST with a text/plain JSON body (no CORS pre-flight needed),
+     - checks body.token === CC_SYNC_TOKEN,
+     - upserts by body.externalId,
+     - returns Access-Control-Allow-Origin so we can read success.               */
+const CC_SYNC_ENABLED = true;
+const CC_SYNC_URL   = "https://mschu-command-center1-production.up.railway.app/api/banner-campaigns/ingest";
+const CC_SYNC_TOKEN = "mschu-bg-sync-7Kq2Rd9Xf3";   /* shared secret — must match the dashboard receiver */
+function ccExternalId(){
+  const base=(state.promoName||'promotion').toString().toLowerCase().trim()
+    .replace(/[^\w一-鿿]+/g,'-').replace(/^-+|-+$/g,'');
+  return 'bg-'+(base||'promotion');
+}
+function ccSetStatus(kind,msg){
+  const el=document.getElementById('ccSyncStatus'); if(!el)return;
+  el.textContent = msg || (kind==='ok'?'✓ Sent to Command Center — it will show in the Stock Reallocation dropdown.'
+    : kind==='pending'?'⏳ Sending to Command Center…'
+    : '⚠ Not connected to Command Center yet (the dashboard side isn’t live, or you’re offline). Your promotion is still saved.');
+  el.style.color = kind==='ok'?'#2E8B57':kind==='pending'?'#666':'#B36B00';
+}
+async function syncToCommandCenter(opts){
+  opts=opts||{};
+  if(!CC_SYNC_ENABLED) return {ok:false,skipped:true};
+  ccSetStatus('pending');
+  const payload={ token:CC_SYNC_TOKEN, source:'banner-generator', version:1,
+    externalId:ccExternalId(), name:(state.promoName||'Untitled promotion'),
+    theme:state.theme, status:'draft', savedAt:new Date().toISOString(),
+    campaign:JSON.parse(JSON.stringify(state)) };
+  try{
+    const res=await fetch(CC_SYNC_URL,{method:'POST',mode:'cors',
+      headers:{'Content-Type':'text/plain;charset=UTF-8'}, body:JSON.stringify(payload)});
+    if(res.ok){ ccSetStatus('ok'); if(opts.manual)toast('✓ Synced to Command Center'); return {ok:true}; }
+    ccSetStatus('err','⚠ Command Center replied '+res.status+'. The dashboard receiver may not be set up yet.');
+    if(opts.manual)toast('Command Center replied '+res.status+' — dashboard side not ready yet');
+    return {ok:false,status:res.status};
+  }catch(e){
+    ccSetStatus('err'); if(opts.manual)toast('Couldn’t reach Command Center yet — promotion saved locally');
+    return {ok:false,error:(e&&e.message)||'network'};
+  }
+}
+
 /* =================== STEPPER =================== */
 function buildStepper(){
   const s=document.getElementById('stepper');s.innerHTML='';
@@ -547,7 +591,9 @@ function saveCurBg(kind){const d=kind==='desktop'?state.customBg:state.mobileBg;
 /* ---- STEP 6 ---- */
 function stepGenerate(){
   return `<div class="step-title">Generate Banners</div><div class="step-desc">Renders banners using real product photos. Exports Desktop (16:9), Mobile (9:16) and Hero — each in English &amp; 繁體中文.</div>
-   <div class="row"><button class="btn-primary" onclick="generateAll()">✨ Generate All Banners</button><button class="btn-ghost" onclick="savePromo()">💾 Save Promotion</button></div>
+   <div class="row"><button class="btn-primary" onclick="generateAll()">✨ Generate All Banners</button><button class="btn-ghost" onclick="savePromo()">💾 Save Promotion</button><button class="btn-ghost" onclick="syncToCommandCenter({manual:true})">🔗 Sync to Command Center</button></div>
+   <div class="hint" style="margin-top:8px">Saving also sends this promotion to your <b>Command Center</b> dashboard automatically — it appears in the Stock Reallocation campaign dropdown, no export/upload needed.</div>
+   <div id="ccSyncStatus" class="hint" style="margin-top:4px"></div>
    <div class="hint" style="margin-top:8px">Desktop PNG 3840×2160 · Mobile PNG 2160×3840 · Hero JPG 1280×1089. Click any result to open it full-size.</div>
    <div id="genGallery"></div>`;
 }
@@ -632,6 +678,7 @@ function savePromo(){
   if(ok && !dropped) toast('Promotion saved'+bk);
   else if(ok && dropped) toast('Saved ('+dropped+' oldest browser-save(s) removed to free space)'+bk);
   else toast('⚠ Browser storage full — kept only the downloaded JSON backup. Re-load it anytime with Import.'+ (dl_ok?'':' Backup download was blocked — use Export JSON.'));
+  try{ syncToCommandCenter({manual:false}); }catch(e){}   // auto-push to Command Center dashboard (non-blocking)
 }
 function exportPromo(id){const r=savedPromos.find(p=>p.id===id);if(!r)return;dl('data:application/json;charset=utf-8,'+encodeURIComponent(JSON.stringify(r.state,null,2)),(r.name||'promotion').replace(/[^\w一-龥-]+/g,'_')+'.json');toast('Downloaded a permanent copy');}
 function loadPromo(id){const r=savedPromos.find(p=>p.id===id);if(!r)return;state=JSON.parse(JSON.stringify(r.state));if(!state.logo&&savedLogo)state.logo=savedLogo;renderStep();toast('Promotion loaded');}
