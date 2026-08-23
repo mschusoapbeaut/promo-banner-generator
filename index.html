@@ -288,7 +288,7 @@ let step=1, maxReached=1, dragSrc=null, dFmt="desktop", dLang="en", pickOpen=nul
 let state=defaultState();
 function defaultState(){return{
   theme:"summer", promoName:"", customPrompt:"",
-  customBg:null, mobileBg:null, logo:null, seasonalBadge:null, centerScrim:false,
+  customBg:null, mobileBg:null, logo:null, seasonalBadge:null, centerScrim:false, scrimOpacity:0.9,
   tiers:[
     {id:"1",amount:500,gifts:[],hidden:false},
     {id:"2",amount:700,gifts:[newGift("Hydrating Cleanser",15)],hidden:false},
@@ -524,7 +524,12 @@ function stepPreview(){
    <button class="btn-primary" style="width:100%" onclick="openDialog()">👁 Preview Banner</button>
    <div class="sep"></div>
    <label class="f" style="display:flex;align-items:center;gap:9px;cursor:pointer"><input type="checkbox" ${state.centerScrim?'checked':''} onchange="state.centerScrim=this.checked;renderStep()" style="width:auto;margin:0"> Add a soft white panel behind the text</label>
-   <div class="hint">Lays a 90%-white rounded panel over the centre so the text stays readable on a busy uploaded background. Toggle on, then Preview.</div>
+   <div class="hint">Lays a white rounded panel over the centre so the text stays readable on a busy uploaded background. Toggle on, set the strength below, then Preview.</div>
+   <div style="${state.centerScrim?'':'opacity:.45;pointer-events:none;'}margin-top:8px">
+     <label class="f" style="display:flex;align-items:center;justify-content:space-between;gap:10px">Panel strength <span id="scrimPct" style="font-weight:600;color:#1B365D">${Math.round((state.scrimOpacity!=null?state.scrimOpacity:0.9)*100)}% white</span></label>
+     <input type="range" min="50" max="100" step="1" value="${Math.round((state.scrimOpacity!=null?state.scrimOpacity:0.9)*100)}" style="width:100%" oninput="setScrimOpacity(this.value)">
+     <div class="hint" style="margin-top:2px">Slide right for a cleaner, whiter centre (like a printed template); left to let more of the artwork show through.</div>
+   </div>
    <div class="sep"></div>
    <label class="f">Custom Background Image (desktop 1920×1080)</label>
    <div class="drop" onclick="document.getElementById('bgUp').click()" ondragover="upOver(event)" ondragleave="upLeave(event)" ondrop="upDrop(event,'customBg')">Drag &amp; drop or click to upload (image or PDF)</div>
@@ -636,7 +641,8 @@ function buildBanner(f,l){
       return`<div style="display:flex;align-items:center;padding:20px 0;gap:12px;position:relative;${idx<tiers.length-1?'border-bottom:1.5px solid rgba(200,200,200,.5)':''}"><div style="flex-shrink:0;min-width:110px"><div style="font-size:18px;color:#1B365D;font-family:sans-serif;font-weight:500;line-height:1.3">HKD</div><div style="font-size:52px;font-weight:bold;color:#1B365D;font-family:sans-serif;line-height:1">${t.amount.toLocaleString()}</div><div style="font-size:16px;color:#1B365D;font-family:sans-serif;margin-top:2px">${STR.inOrder[l]}</div></div><div style="display:flex;flex-direction:column;align-items:center;flex-shrink:0;min-width:80px"><div style="font-size:36px;line-height:1">🚚</div><div style="font-size:14px;color:#2E8B57;font-weight:bold;font-family:sans-serif;margin-top:4px;text-align:center">${STR.ship[l]}</div></div>${gc>0?`<div style="font-size:28px;font-weight:bold;color:#1B365D;font-family:sans-serif;flex-shrink:0">+</div>`:''}<div style="flex:1;display:grid;grid-template-columns:${gc<=1?'1fr':'repeat(2,1fr)'};gap:8px;align-content:center;justify-items:center">${cells}</div><div style="flex-shrink:0;text-align:right;min-width:110px">${tv>0?`<div style="font-size:18px;color:#1B365D;font-family:sans-serif;font-weight:500;line-height:1.2">${STR.valueM[l]}</div><div style="font-size:32px;font-weight:bold;color:#1B365D;font-family:sans-serif;line-height:1.1">HKD ${tv.toLocaleString()}</div>`:`<div style="font-size:22px;font-weight:bold;color:#2E8B57;font-family:sans-serif">= ${STR.ship[l]}</div>`}</div></div>`;}).join('')+`</div>`;
   }
   const foot=`<div style="height:${f==='mobile'?70:80}px;background:#1B365D;display:flex;align-items:center;justify-content:center;padding:0 ${f==='mobile'?30:40}px;flex-shrink:0;${f==='mobile'?'margin-top:8px':''}"><p style="color:#fff;font-size:${f==='mobile'?13:14}px;text-align:center;margin:0;font-family:sans-serif;line-height:1.4">${STR.disc[l]}</p></div>`;
-  const scrim=(state.centerScrim&&bg)?`<div style="position:absolute;inset:${f==='mobile'?'6% 6%':'9% 5%'};background:rgba(255,255,255,.9);border-radius:28px;z-index:0;box-shadow:0 8px 44px rgba(0,0,0,.07)"></div>`:'';
+  const scrimOp=(state.scrimOpacity!=null?state.scrimOpacity:0.9);
+  const scrim=(state.centerScrim&&bg)?`<div style="position:absolute;inset:${f==='mobile'?'6% 6%':'9% 5%'};background:rgba(255,255,255,${scrimOp});border-radius:28px;z-index:0;box-shadow:0 8px 44px rgba(0,0,0,.07)"></div>`:'';
   el.innerHTML=(bg?'':botanical())+`<div style="position:absolute;top:12px;left:12px;right:12px;bottom:12px;border:2px solid rgba(212,175,55,.4);border-radius:4px;pointer-events:none;z-index:3"></div>`+scrim+`<div style="position:relative;z-index:1;display:flex;flex-direction:column;flex:1;min-height:0">`+header+body+foot+`</div>`;
   return{el,W,H};
 }
@@ -648,6 +654,7 @@ function dSetFmt(f){dFmt=f;document.querySelectorAll('#dFmt button').forEach(b=>
 function dSetLang(l){dLang=l;document.querySelectorAll('#dLang button').forEach(b=>b.classList.toggle('on',b.dataset.l===l));dRender();}
 function dRender(){const host=document.getElementById('dHost');host.innerHTML='';const{el,W,H}=buildBanner(dFmt,dLang);host.appendChild(el);const availW=Math.min(window.innerWidth*0.9,1200),availH=window.innerHeight*0.75;const scale=Math.min(1,availW/W,availH/H);const sc=document.getElementById('dScaler');sc.style.transform=`scale(${scale})`;sc.style.width=W+'px';sc.style.height=(H*scale)+'px';}
 async function dExport(){toast('Rendering '+dFmt+'…');try{const{url,ext}=await rasterize(dFmt,dLang);dl(url,`promotion-${dFmt}-${dLang}.${ext}`);toast('Downloaded');}catch(e){toast('Export blocked by a cross-origin image');}}
+function setScrimOpacity(v){state.scrimOpacity=Math.max(0,Math.min(1,(+v)/100));const p=document.getElementById('scrimPct');if(p)p.textContent=Math.round(state.scrimOpacity*100)+'% white';const ov=document.getElementById('overlay');if(ov&&ov.classList.contains('open'))dRender();}
 
 /* =================== EXPORT =================== */
 async function rasterize(f,l){const{el,W,H}=buildBanner(f,l);const holder=document.createElement('div');holder.style.cssText='position:fixed;left:0;top:0;opacity:0;pointer-events:none;z-index:-1';holder.appendChild(el);document.body.appendChild(holder);await new Promise(r=>setTimeout(r,350));const pr=f==='hero'?1:2;const opt={pixelRatio:pr,cacheBust:true,quality:f==='hero'?0.82:0.95,width:W,height:H,style:{transform:'none'}};let url;try{url=f==='hero'?await htmlToImage.toJpeg(el,opt):await htmlToImage.toPng(el,opt);}catch(e){document.body.removeChild(holder);throw e;}document.body.removeChild(holder);return{url,ext:f==='hero'?'jpg':'png'};}
