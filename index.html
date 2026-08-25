@@ -548,7 +548,7 @@ function stepPreview(){
    <label class="f">Seasonal Message Image (top-left, replaces the shield badge)</label>
    <div class="drop" onclick="document.getElementById('badgeUp').click()" ondragover="upOver(event)" ondragleave="upLeave(event)" ondrop="upDrop(event,'seasonalBadge')">Upload seasonal badge art (image or PDF)</div>
    <input type="file" id="badgeUp" accept="image/*,application/pdf" style="display:none" onchange="upload(event,'seasonalBadge')">
-   ${state.seasonalBadge?`<div class="thumbrow"><div class="bgthumb desktop"><img src="${state.seasonalBadge}" style="object-fit:contain;background:#fff"></div><button class="btn-danger mini" onclick="state.seasonalBadge=null;renderStep()">Remove</button></div>`:''}
+   ${state.seasonalBadge?`<div class="thumbrow"><div class="bgthumb desktop"><img src="${state.seasonalBadge}" style="object-fit:contain;background:#fff"></div><button class="btn-ghost mini" onclick="cutoutSeasonalBadge()">✂️ Cut white</button><button class="btn-danger mini" onclick="state.seasonalBadge=null;renderStep()">Remove</button></div>`:''}
    <div class="sep"></div><div class="step-title" style="font-size:15px">Product Image Overrides</div>
    <div class="hint">Replace a gift's Shopify photo with your own cleaner cutout (a transparent PNG looks best on the banner). Leave as-is to use the catalog photo.</div>
    <div class="row" style="margin:9px 0;gap:8px"><button class="btn-primary" onclick="cutoutAllGifts()">✂️ Cut out white — all gifts</button><button class="btn-ghost" onclick="resetAllCutouts()">↩︎ Undo cut-outs</button></div>
@@ -628,6 +628,12 @@ async function cutoutAllGifts(){
   renderStep();
   toast(done+' gift image(s) cut out'+(fail?(' · '+fail+' could not be read'):'')+'. Hit Preview to see them.');
 }
+async function cutoutSeasonalBadge(){
+  if(!state.seasonalBadge){toast('No seasonal image to cut');return;}
+  toast('Cutting out white background…');
+  try{ state.seasonalBadge=await cutoutWhiteImg(state.seasonalBadge); renderStep(); toast('White background removed from seasonal badge'); }
+  catch(e){ toast('Could not process that image (access blocked)'); }
+}
 async function cutoutOneGift(tid,gid){
   const g=gget(tid,gid); if(!g)return; const src=gimg(g); if(!src){toast('No image to cut');return;}
   toast('Cutting out white background…');
@@ -658,7 +664,7 @@ function giftTotal(t){return t.gifts.filter(g=>!g.hidden).reduce((s,g)=>s+(+g.va
 function filledGifts(t){return t.gifts.filter(g=>!g.hidden&&(g.img||g.title));}
 function botanical(){return`<div style="position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse at top left,rgba(46,139,87,.08) 0%,transparent 30%),radial-gradient(ellipse at top right,rgba(212,175,55,.08) 0%,transparent 30%),radial-gradient(ellipse at bottom left,rgba(46,139,87,.06) 0%,transparent 25%),radial-gradient(ellipse at bottom right,rgba(212,175,55,.06) 0%,transparent 25%)"></div>`;}
 function logoUrl(){return state.logo||LOGO;}
-function badgeOrSeasonal(top,left,w,pad,fs){if(state.seasonalBadge)return`<div style="position:absolute;top:${top}px;left:${left}px"><img src="${state.seasonalBadge}" crossorigin="anonymous" style="width:${w}px;height:auto;object-fit:contain;mix-blend-mode:multiply;filter:contrast(1.1)"></div>`;return`<div style="position:absolute;top:${top+(fs===18?10:13)}px;left:${left}px;background:${themeBadgeColor()};color:#fff;padding:${pad};font-weight:bold;font-size:${fs}px;font-family:sans-serif;clip-path:polygon(0 0,100% 0,100% 75%,50% 100%,0 75%);text-align:center;line-height:1.2">${escH(themeBadgeLabel())}</div>`;}
+function badgeOrSeasonal(top,left,w,pad,fs){if(state.seasonalBadge)return`<div style="position:absolute;top:${top}px;left:${left}px"><img src="${state.seasonalBadge}" crossorigin="anonymous" style="width:${w}px;height:auto;object-fit:contain"></div>`;return`<div style="position:absolute;top:${top+(fs===18?10:13)}px;left:${left}px;background:${themeBadgeColor()};color:#fff;padding:${pad};font-weight:bold;font-size:${fs}px;font-family:sans-serif;clip-path:polygon(0 0,100% 0,100% 75%,50% 100%,0 75%);text-align:center;line-height:1.2">${escH(themeBadgeLabel())}</div>`;}
 function imgTag(url,styl){if(!url)return'';const blend=url.startsWith('data:image')?'normal':'multiply';return`<img src="${url}" crossorigin="anonymous" style="${styl};mix-blend-mode:${blend}" onerror="this.style.visibility='hidden'">`;}
 function buildBanner(f,l){
   const isZh=l==='zh',bg=(f==='mobile'&&state.mobileBg)?state.mobileBg:state.customBg,cream="linear-gradient(135deg,#FDF8F0 0%,#FAF3E8 50%,#FDF8F0 100%)",tiers=visibleTiers();
