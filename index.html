@@ -338,7 +338,20 @@ let savedLogo=lsGet('mschu_logo',null); if(savedLogo)state.logo=savedLogo;   /* 
      - returns Access-Control-Allow-Origin so we can read success.               */
 const CC_SYNC_ENABLED = true;
 const CC_SYNC_URL   = "https://mschu-command-center1-production.up.railway.app/api/banner-campaigns/ingest";
-const CC_SYNC_TOKEN = "mschu-bg-sync-7Kq2Rd9Xf3";   /* shared secret — must match the dashboard receiver */
+/* The sync code is NOT kept in this file: the page is public on GitHub, so a
+   code written here can be read by anyone. Each browser asks for it once and
+   remembers it (localStorage). If it is ever changed on the dashboard, the next
+   sync is refused and this page asks for the new code. */
+const CC_SYNC_CODE_KEY = 'mschu_cc_sync_code';
+function ccSyncCode(forceAsk){
+  let c=''; try{ c=localStorage.getItem(CC_SYNC_CODE_KEY)||''; }catch(e){}
+  if(!c || forceAsk){
+    c=(window.prompt('Command Center sync code\n(enter it once on this computer; ask Cindy if you do not have it):','')||'').trim();
+    if(c){ try{ localStorage.setItem(CC_SYNC_CODE_KEY,c); }catch(e){} }
+  }
+  return c;
+}
+function ccForgetSyncCode(){ try{ localStorage.removeItem(CC_SYNC_CODE_KEY); }catch(e){} }
 function ccExternalId(){
   const base=(state.promoName||'promotion').toString().toLowerCase().trim()
     .replace(/[^\w一-鿿]+/g,'-').replace(/^-+|-+$/g,'');
@@ -354,8 +367,13 @@ function ccSetStatus(kind,msg){
 async function syncToCommandCenter(opts){
   opts=opts||{};
   if(!CC_SYNC_ENABLED) return {ok:false,skipped:true};
+  const code=ccSyncCode(!!opts.askAgain);
+  if(!code){
+    ccSetStatus('err','⚠ Not sent: no Command Center sync code entered. Press “Sync to Command Center” to enter it. Your promotion is still saved.');
+    return {ok:false,error:'no-code'};
+  }
   ccSetStatus('pending');
-  const payload={ token:CC_SYNC_TOKEN, source:'banner-generator', version:1,
+  const payload={ token:code, source:'banner-generator', version:1,
     externalId:ccExternalId(), name:(state.promoName||'Untitled promotion'),
     theme:state.theme, status:'draft', savedAt:new Date().toISOString(),
     campaign:JSON.parse(JSON.stringify(state)) };
@@ -363,6 +381,13 @@ async function syncToCommandCenter(opts){
     const res=await fetch(CC_SYNC_URL,{method:'POST',mode:'cors',
       headers:{'Content-Type':'text/plain;charset=UTF-8'}, body:JSON.stringify(payload)});
     if(res.ok){ ccSetStatus('ok'); if(opts.manual)toast('✓ Synced to Command Center'); return {ok:true}; }
+    if(res.status===401){
+      ccForgetSyncCode();
+      if(opts.manual && !opts.askAgain) return syncToCommandCenter({manual:true,askAgain:true});
+      ccSetStatus('err','⚠ Command Center did not accept the sync code. Press “Sync to Command Center” to enter it again. Your promotion is still saved.');
+      if(opts.manual)toast('Sync code not accepted');
+      return {ok:false,status:401};
+    }
     ccSetStatus('err','⚠ Command Center replied '+res.status+'. The dashboard receiver may not be set up yet.');
     if(opts.manual)toast('Command Center replied '+res.status+' — dashboard side not ready yet');
     return {ok:false,status:res.status};
